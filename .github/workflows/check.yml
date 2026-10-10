@@ -13,6 +13,18 @@ jobs:
     runs-on: ubuntu-latest
     env:
       HUSKY: "0"
+      TEST_DATABASE_URL: postgres://obliq:obliq@127.0.0.1:5432/obliq_invitations_test
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: obliq
+          POSTGRES_PASSWORD: obliq
+          POSTGRES_DB: obliq_invitations_test
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U obliq -d obliq_invitations_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -21,3 +33,5 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
+
+      - run: npm run test:db
