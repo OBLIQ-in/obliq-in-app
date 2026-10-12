@@ -1,0 +1,140 @@
+.modal-backdrop,
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: #1118;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.modal {
+  width: min(420px, 100%);
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 20px 55px #0003;
+}
+.modal-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  align-items: flex-start;
+  padding: 22px 22px 15px;
+  border-bottom: 1px solid #eee;
+}
+.modal-head span,
+.drawer-top span {
+  color: #999;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+.modal-head h2 {
+  margin: 6px 0 0;
+  font-size: 20px;
+  letter-spacing: -0.03em;
+}
+.modal form {
+  display: grid;
+  gap: 15px;
+  padding: 20px 22px 22px;
+}
+.modal label {
+  display: grid;
+  gap: 7px;
+  color: #555;
+  font-size: 10px;
+  font-weight: 600;
+}
+.modal input,
+.modal select {
+  width: 100%;
+  height: 38px;
+  padding: 0 11px;
+  border: 1px solid #dedede;
+  border-radius: 7px;
+  background: #fff;
+  color: #222;
+  font-size: 11px;
+}
+.modal input::placeholder {
+  color: #aaa;
+}
+.modal-note {
+  margin: 0;
+  color: #999;
+  font-size: 10px;
+  line-height: 1.5;
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 2px;
+}
+.form-error {
+  margin: 0;
+  color: #b24554;
+  font-size: 11px;
+}
+.drawer-backdrop {
+  justify-content: flex-end;
+  padding: 0;
+}
+.detail-drawer {
+  width: min(410px, 100%);
+  height: 100%;
+  overflow: auto;
+  padding: 28px;
+  background: #fff;
+  box-shadow: -15px 0 40px #0002;
+}
+.drawer-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.detail-drawer h2 {
+  margin: 25px 0 5px;
+  font-size: 24px;
+  letter-spacing: -0.04em;
+}
+.detail-drawer > p {
+  color: #888;
+  font-size: 11px;
+}
+.drawer-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin: 30px 0;
+}
+.drawer-facts small,
+.drawer-facts strong {
+  display: block;
+}
+.drawer-facts small {
+  margin-bottom: 7px;
+  color: #999;
+  font-size: 10px;
+}
+.drawer-facts strong {
+  font-size: 12px;
+}
+.drawer-progress {
+  padding: 20px 0;
+  border-top: 1px solid #eee;
+}
+.drawer-progress > div {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+}
+.drawer-progress .progress-track {
+  width: 100%;
+  margin-top: 12px;
+  height: 7px;
+}
