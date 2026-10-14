@@ -7,6 +7,7 @@ import {
   validDocuments,
   validActivity,
   validTimeEntries,
+  validReviews,
 } from "../../src/lib/storage-validation.ts";
 
 test("rejects storage that is not a record array", () => {
@@ -70,4 +71,54 @@ test("rejects an unknown priority or a team that is not a list of names", () => 
   assert.equal(validProjects([{ ...project, priority: "Urgent" }]), false);
   assert.equal(validProjects([{ ...project, team: "NK" }]), false);
   assert.equal(validProjects([{ ...project, team: ["NK", 3] }]), false);
+});
+
+const review = {
+  documentId: "DOC-1",
+  status: "Accepted",
+  reviewer: "Demo reviewer",
+  acceptedAt: "2026-10-12T10:00:00.000Z",
+  history: [
+    {
+      id: "REV-1",
+      documentId: "DOC-1",
+      previousStatus: "Received",
+      status: "Accepted",
+      actor: "Demo reviewer",
+      timestamp: "2026-10-12T10:00:00.000Z",
+    },
+  ],
+};
+
+test("validates review status history and required messages", () => {
+  assert.equal(validReviews([review]), true);
+  assert.equal(validReviews([{ ...review, status: "Unknown" }]), false);
+  assert.equal(
+    validReviews([
+      {
+        ...review,
+        status: "Rejected",
+        history: [
+          { ...review.history[0], status: "Rejected", rejectionReason: " " },
+        ],
+      },
+    ]),
+    false,
+  );
+  assert.equal(
+    validReviews([
+      {
+        ...review,
+        status: "More information required",
+        history: [
+          {
+            ...review.history[0],
+            status: "More information required",
+            clientMessage: "",
+          },
+        ],
+      },
+    ]),
+    false,
+  );
 });

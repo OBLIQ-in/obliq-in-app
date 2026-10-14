@@ -53,6 +53,39 @@ export type Document = {
   status: string;
 };
 
+export const evidenceReviewStatuses = [
+  "Received",
+  "Under review",
+  "Accepted",
+  "Rejected",
+  "More information required",
+] as const;
+
+export type EvidenceReviewStatus = (typeof evidenceReviewStatuses)[number];
+
+export type EvidenceReviewEvent = {
+  id: string;
+  documentId: string;
+  previousStatus: EvidenceReviewStatus;
+  status: EvidenceReviewStatus;
+  actor: string;
+  timestamp: string;
+  rejectionReason?: string;
+  clientMessage?: string;
+  internalNote?: string;
+};
+
+export type DocumentReview = {
+  documentId: string;
+  status: EvidenceReviewStatus;
+  reviewer?: string;
+  acceptedAt?: string;
+  rejectionReason?: string;
+  clientMessage?: string;
+  internalNote?: string;
+  history: EvidenceReviewEvent[];
+};
+
 export type ActivityItem = {
   id: string;
   person: string;
@@ -87,6 +120,7 @@ export type WorkspaceData = {
   clients: Client[];
   invoices: Invoice[];
   documents: Document[];
+  reviews: DocumentReview[];
   activity: ActivityItem[];
   entries: TimeEntry[];
 };
@@ -95,5 +129,14 @@ export type WorkspaceData = {
 export type WorkspaceSource = {
   load: () => Promise<WorkspaceData>;
   create: (kind: ModalKind, values: FormValues) => Promise<WorkspaceData>;
+  reviewDocument: (
+    documentId: string,
+    status: EvidenceReviewStatus,
+    details: {
+      rejectionReason?: string;
+      clientMessage?: string;
+      internalNote?: string;
+    },
+  ) => Promise<WorkspaceData>;
   saveTime: (project: string, seconds: number) => Promise<WorkspaceData>;
 };

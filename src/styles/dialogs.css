@@ -92,6 +92,132 @@
   background: #fff;
   box-shadow: -15px 0 40px #0002;
 }
+.evidence-review-drawer {
+  width: min(520px, 100%);
+  padding: 34px 32px 40px;
+}
+.evidence-review-drawer h2 {
+  margin-top: 28px;
+  font-size: 28px;
+}
+.evidence-review-drawer > p {
+  margin: 0 0 26px;
+}
+.review-form {
+  display: grid;
+  gap: 17px;
+  padding: 0;
+}
+.review-field {
+  display: grid;
+  gap: 8px;
+  color: #555;
+  font-size: 11px;
+  font-weight: 600;
+}
+.review-field select,
+.review-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #dcdcdc;
+  border-radius: 8px;
+  background: #fff;
+  color: #222;
+  font: inherit;
+  font-weight: 400;
+}
+.review-field select {
+  height: 40px;
+  padding: 0 11px;
+}
+.review-field textarea {
+  min-height: 84px;
+  padding: 10px 11px;
+  resize: vertical;
+  line-height: 1.45;
+}
+.review-field select:focus,
+.review-field textarea:focus {
+  border-color: #7ca6c6;
+  outline: 2px solid #dcecf7;
+  outline-offset: 1px;
+}
+.review-meta,
+.client-message {
+  margin: 0;
+  padding: 12px 13px;
+  border-radius: 9px;
+  background: #f5f8fa;
+  color: #5e6970;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.client-message small {
+  display: block;
+  margin-bottom: 5px;
+  color: #6689a1;
+  font-size: 10px;
+  font-weight: 700;
+}
+.client-message p {
+  margin: 0;
+}
+.review-actions {
+  margin-top: 2px;
+  padding-top: 4px;
+}
+.review-history {
+  margin-top: 34px;
+  padding-top: 24px;
+  border-top: 1px solid #eeeeee;
+}
+.review-history h3 {
+  margin: 0 0 16px;
+  font-size: 16px;
+  letter-spacing: -0.02em;
+}
+.review-history ol {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: review;
+}
+.review-history-item {
+  position: relative;
+  padding: 13px 14px 13px 16px;
+  border: 1px solid #ededed;
+  border-radius: 10px;
+  background: #fcfcfc;
+}
+.review-history-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  color: #777;
+  font-size: 10px;
+}
+.review-history-item p {
+  display: grid;
+  gap: 3px;
+  margin: 10px 0 0;
+  color: #555;
+  font-size: 11px;
+  line-height: 1.45;
+}
+.review-history-item p strong {
+  color: #999;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.review-history > p {
+  margin: 0;
+  color: #999;
+  font-size: 11px;
+}
 .drawer-top {
   display: flex;
   justify-content: space-between;

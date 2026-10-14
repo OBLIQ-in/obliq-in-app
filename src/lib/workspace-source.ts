@@ -5,15 +5,54 @@ import {
   validClients,
   validInvoices,
   validDocuments,
+  validReviews,
   validActivity,
   validTimeEntries,
 } from "./storage-validation.ts";
-import type { WorkspaceData, WorkspaceSource } from "@/types/workspace";
+import {
+  evidenceReviewStatuses,
+  type DocumentReview,
+  type WorkspaceData,
+  type WorkspaceSource,
+} from "../types/workspace.ts";
 
 type Storage = {
   getItem: (key: string) => string | null;
   setItem: (key: string, value: string) => void;
 };
+
+const REVIEWER = "Demo reviewer";
+
+function defaultReviews(
+  documents: WorkspaceData["documents"],
+): DocumentReview[] {
+  return documents.map((document) => ({
+    documentId: document.id,
+    status: "Received",
+    history: [],
+  }));
+}
+
+function normalizeReview(review: DocumentReview): DocumentReview {
+  return {
+    ...review,
+    ...(review.status === "Rejected"
+      ? { rejectionReason: review.rejectionReason }
+      : { rejectionReason: undefined }),
+    ...(review.status === "More information required"
+      ? { clientMessage: review.clientMessage }
+      : { clientMessage: undefined }),
+    history: review.history.map((event) => ({
+      ...event,
+      ...(event.status === "Rejected"
+        ? { rejectionReason: event.rejectionReason }
+        : { rejectionReason: undefined }),
+      ...(event.status === "More information required"
+        ? { clientMessage: event.clientMessage }
+        : { clientMessage: undefined }),
+    })),
+  };
+}
 
 export function createLocalWorkspace(
   getStorage: () => Storage | null,
@@ -23,6 +62,7 @@ export function createLocalWorkspace(
     clients: dashboard.clients,
     invoices: dashboard.invoices,
     documents: dashboard.documents,
+    reviews: defaultReviews(dashboard.documents),
     activity: dashboard.activity,
     entries: [],
   };
@@ -70,11 +110,18 @@ export function createLocalWorkspace(
 
   return {
     async load() {
+      const documents = read("documents", data.documents, validDocuments);
+      const reviews = read("reviews", defaultReviews(documents), validReviews)
+        .filter((review) =>
+          documents.some((document) => document.id === review.documentId),
+        )
+        .map(normalizeReview);
       data = {
         projects: read("projects", data.projects, validProjects),
         clients: read("clients", data.clients, validClients),
         invoices: read("invoices", data.invoices, validInvoices),
-        documents: read("documents", data.documents, validDocuments),
+        documents,
+        reviews,
         activity: read("activity", data.activity, validActivity),
         entries: read("time", data.entries, validTimeEntries),
       };
@@ -157,6 +204,81 @@ export function createLocalWorkspace(
         write("documents", data.documents);
         addActivity(`created a ${kind} for`, values.client);
       }
+      return data;
+    },
+    async reviewDocument(documentId, status, details) {
+      if (!evidenceReviewStatuses.includes(status)) {
+        throw new Error("Unsupported evidence review status.");
+      }
+      const document = data.documents.find((item) => item.id === documentId);
+      if (!document) throw new Error("Document not found.");
+      const rejectionReason = details.rejectionReason?.trim();
+      const clientMessage = details.clientMessage?.trim();
+      const internalNote = details.internalNote?.trim();
+      if (status === "Rejected" && !rejectionReason) {
+        throw new Error("A rejection reason is required.");
+      }
+      if (status === "More information required" && !clientMessage) {
+        throw new Error("A client-facing message is required.");
+      }
+
+      const current = data.reviews.find(
+        (review) => review.documentId === documentId,
+      ) || {
+        documentId,
+        status: "Received" as const,
+        history: [],
+      };
+      const sameDetails =
+        current.status === status &&
+        current.rejectionReason === rejectionReason &&
+        current.clientMessage === clientMessage &&
+        current.internalNote === internalNote;
+      if (sameDetails) return data;
+
+      const timestamp = new Date().toISOString();
+      const event = {
+        id: `REV-${crypto.randomUUID()}`,
+        documentId,
+        previousStatus: current.status,
+        status,
+        actor: REVIEWER,
+        timestamp,
+        ...(status === "Rejected" && rejectionReason
+          ? { rejectionReason }
+          : {}),
+        ...(status === "More information required" && clientMessage
+          ? { clientMessage }
+          : {}),
+        ...(internalNote ? { internalNote } : {}),
+      };
+      const nextReview: DocumentReview = {
+        documentId,
+        status,
+        history: [...current.history, event],
+        ...(status === "Accepted"
+          ? { reviewer: REVIEWER, acceptedAt: timestamp }
+          : current.reviewer
+            ? { reviewer: current.reviewer }
+            : {}),
+        ...(status === "Accepted"
+          ? { acceptedAt: timestamp }
+          : current.acceptedAt
+            ? { acceptedAt: current.acceptedAt }
+            : {}),
+        ...(status === "Rejected" ? { rejectionReason } : {}),
+        ...(status === "More information required" ? { clientMessage } : {}),
+        ...(internalNote ? { internalNote } : {}),
+      };
+      data = {
+        ...data,
+        reviews: [
+          nextReview,
+          ...data.reviews.filter((review) => review.documentId !== documentId),
+        ],
+      };
+      write("reviews", data.reviews);
+      addActivity(`updated evidence status to ${status}`, document.title);
       return data;
     },
     async saveTime(project, seconds) {

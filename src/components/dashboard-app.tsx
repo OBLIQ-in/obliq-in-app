@@ -33,8 +33,14 @@ import { SettingsPage } from "@/components/dashboard/pages/settings";
 import { TaxesPage } from "@/components/dashboard/pages/taxes";
 import { TimePage } from "@/components/dashboard/pages/time";
 import { ProjectDrawer } from "@/components/dashboard/project-drawer";
+import { EvidenceReviewDrawer } from "@/components/dashboard/evidence-review-drawer";
 import { WorkspaceModal } from "@/components/dashboard/workspace-modal";
-import type { FormValues, ModalKind, Project } from "@/types/workspace";
+import type {
+  Document,
+  FormValues,
+  ModalKind,
+  Project,
+} from "@/types/workspace";
 
 export default function DashboardApp({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -45,7 +51,7 @@ export default function DashboardApp({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const workspace = useWorkspace();
-  const { projects, clients, invoices, documents, activity, entries } =
+  const { projects, clients, invoices, documents, reviews, activity, entries } =
     workspace;
   const ready = !workspace.loading && !workspace.error;
   const timer = useTimer();
@@ -56,6 +62,9 @@ export default function DashboardApp({ children }: { children: ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [modal, setModal] = useState<ModalKind | null>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(
+    null,
+  );
   const [toast, setToast] = useState("");
   useEffect(() => {
     if (!toast) return;
@@ -300,8 +309,10 @@ export default function DashboardApp({ children }: { children: ReactNode }) {
         {ready && route === "contracts" && (
           <DocumentsPage
             documents={documents}
+            reviews={reviews}
             openModal={setModal}
             query={query}
+            selectDocument={setSelectedDocument}
           />
         )}
         {ready && route === "balance" && (
@@ -331,6 +342,25 @@ export default function DashboardApp({ children }: { children: ReactNode }) {
         <ProjectDrawer
           project={selectedProject}
           close={() => setSelectedProject(null)}
+        />
+      )}
+      {selectedDocument && (
+        <EvidenceReviewDrawer
+          document={selectedDocument}
+          review={
+            reviews.find(
+              (review) => review.documentId === selectedDocument.id,
+            ) || {
+              documentId: selectedDocument.id,
+              status: "Received",
+              history: [],
+            }
+          }
+          close={() => setSelectedDocument(null)}
+          save={async (documentId, status, details) => {
+            await workspace.reviewDocument(documentId, status, details);
+            setToast("Review saved");
+          }}
         />
       )}
       {toast && (

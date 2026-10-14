@@ -2,10 +2,13 @@ import type {
   ActivityItem,
   Client,
   Document,
+  DocumentReview,
+  EvidenceReviewEvent,
   Invoice,
   Project,
   TimeEntry,
-} from "@/types/workspace";
+} from "../types/workspace.ts";
+import { evidenceReviewStatuses } from "../types/workspace.ts";
 
 type FieldType =
   | "string"
@@ -81,6 +84,62 @@ export const validDocuments = records<Document>({
   updated: "string",
   status: "string",
 });
+
+const isStatus = (value: unknown) =>
+  typeof value === "string" &&
+  evidenceReviewStatuses.includes(
+    value as (typeof evidenceReviewStatuses)[number],
+  );
+
+const isOptionalString = (value: unknown) =>
+  value === undefined || typeof value === "string";
+
+const validReviewEvent = (value: unknown): value is EvidenceReviewEvent => {
+  if (!value || typeof value !== "object") return false;
+  const event = value as Record<string, unknown>;
+  return (
+    typeof event.id === "string" &&
+    event.id.trim().length > 0 &&
+    typeof event.documentId === "string" &&
+    event.documentId.trim().length > 0 &&
+    isStatus(event.previousStatus) &&
+    isStatus(event.status) &&
+    typeof event.actor === "string" &&
+    event.actor.trim().length > 0 &&
+    typeof event.timestamp === "string" &&
+    !Number.isNaN(Date.parse(event.timestamp)) &&
+    isOptionalString(event.rejectionReason) &&
+    isOptionalString(event.clientMessage) &&
+    isOptionalString(event.internalNote) &&
+    (event.status !== "Rejected" ||
+      (typeof event.rejectionReason === "string" &&
+        event.rejectionReason.trim().length > 0)) &&
+    (event.status !== "More information required" ||
+      (typeof event.clientMessage === "string" &&
+        event.clientMessage.trim().length > 0))
+  );
+};
+
+export const validReviews = (value: unknown): value is DocumentReview[] =>
+  Array.isArray(value) &&
+  value.every((item) => {
+    if (!item || typeof item !== "object") return false;
+    const review = item as Record<string, unknown>;
+    return (
+      typeof review.documentId === "string" &&
+      review.documentId.trim().length > 0 &&
+      isStatus(review.status) &&
+      isOptionalString(review.reviewer) &&
+      isOptionalString(review.acceptedAt) &&
+      (review.acceptedAt === undefined ||
+        !Number.isNaN(Date.parse(review.acceptedAt as string))) &&
+      isOptionalString(review.rejectionReason) &&
+      isOptionalString(review.clientMessage) &&
+      isOptionalString(review.internalNote) &&
+      Array.isArray(review.history) &&
+      review.history.every(validReviewEvent)
+    );
+  });
 export const validActivity = records<ActivityItem>({
   id: "string",
   person: "string",

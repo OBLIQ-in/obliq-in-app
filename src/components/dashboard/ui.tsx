@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 import { ArrowRight, Plus } from "lucide-react";
+import type { EvidenceReviewStatus } from "@/types/workspace";
 
 export function Status({ value }: { value: string }) {
   return (
@@ -9,6 +10,10 @@ export function Status({ value }: { value: string }) {
       {value}
     </span>
   );
+}
+
+export function ReviewStatus({ value }: { value: EvidenceReviewStatus }) {
+  return <Status value={value} />;
 }
 
 export function SectionHeader({
