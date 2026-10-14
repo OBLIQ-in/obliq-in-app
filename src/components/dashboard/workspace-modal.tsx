@@ -3,6 +3,7 @@ import { useState } from "react";
 import type React from "react";
 import { Check, X } from "lucide-react";
 import { parseDate } from "@/lib/format";
+import { WorkspaceConflict } from "@/lib/workspace-error";
 import type { Client, FormValues, ModalKind } from "@/types/workspace";
 
 export function WorkspaceModal({
@@ -33,7 +34,7 @@ export function WorkspaceModal({
     const form = new FormData(event.currentTarget);
     const values = {
       title: String(form.get("title") || "").trim(),
-      client: String(form.get("client") || ""),
+      clientId: String(form.get("clientId") || ""),
       amount: Number(form.get("amount")),
       due: String(form.get("due") || ""),
       contact: String(form.get("contact") || "").trim(),
@@ -50,8 +51,12 @@ export function WorkspaceModal({
     setSaving(true);
     try {
       await create(kind, values);
-    } catch {
-      setError("Unable to save. Your form is still here. Try again.");
+    } catch (error) {
+      setError(
+        error instanceof WorkspaceConflict
+          ? error.message
+          : "Unable to save. Your form is still here. Try again.",
+      );
     } finally {
       setSaving(false);
     }
@@ -124,12 +129,12 @@ export function WorkspaceModal({
             <label>
               Client
               <select
-                name="client"
+                name="clientId"
                 required
-                defaultValue={clients[0]?.name || ""}
+                defaultValue={clients[0]?.id || ""}
               >
                 {clients.map((item) => (
-                  <option key={item.id} value={item.name}>
+                  <option key={item.id} value={item.id}>
                     {item.name}
                   </option>
                 ))}
