@@ -58,3 +58,11 @@ See [the LLD](docs/lld.md) for the file structure, adapter contract, and backend
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for branches, commits, pull requests, and labels.
+
+## Login (optional)
+
+Login uses Auth0 and is off unless `AUTH_ENABLED=true`. With it off, the dashboard opens directly as before.
+
+To try it, create a free Auth0 tenant and a Regular Web Application. Set the callback URL to `http://localhost:4173/auth/callback` and the logout URL to `http://localhost:4173`. Copy `.env.example` to `.env.local`, fill in the values, and set `AUTH_ENABLED=true`. Use `localhost`, not `127.0.0.1`, while testing login, so the login cookies stay on one host. Restart the dev server after changing `.env.local`. Never commit `.env.local`.
+
+With login on, signed-out visitors are sent to `/login`, which links to Auth0's login and sign-up screens. After login they return to the page they asked for. Linking the Auth0 identity to an OBLIQ user and firm comes in a later change.
