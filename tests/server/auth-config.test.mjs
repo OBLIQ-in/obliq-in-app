@@ -31,6 +31,10 @@ test("return paths stay on this site", () => {
   assert.equal(safeReturnTo("https://evil.example"), "/");
   assert.equal(safeReturnTo("//evil.example"), "/");
   assert.equal(safeReturnTo("/\\evil.example"), "/");
+  // Browsers drop tabs and newlines, which turns these into //evil.example.
+  assert.equal(safeReturnTo("/\t/evil.example"), "/");
+  assert.equal(safeReturnTo("/\n/evil.example"), "/");
+  assert.equal(safeReturnTo("javascript:alert(1)"), "/");
 });
 
 test("builds login links with the return path", () => {

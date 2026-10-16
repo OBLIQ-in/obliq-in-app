@@ -12,9 +12,18 @@ export function isPublicPath(pathname: string) {
 }
 
 // Only a path on this site can be the place to return to after login.
+// Parsed the way a browser would, because browsers drop tabs and newlines
+// from URLs: "/\t/evil.example" becomes "//evil.example", another site.
 export function safeReturnTo(value: string | null | undefined) {
-  if (!value || !value.startsWith("/") || /^\/[/\\]/.test(value)) return "/";
-  return value;
+  if (!value) return "/";
+  const base = "http://local.invalid";
+  try {
+    const url = new URL(value, base);
+    if (url.origin !== base) return "/";
+    return url.pathname + url.search + url.hash;
+  } catch {
+    return "/";
+  }
 }
 
 export function loginPath(returnTo: string) {
