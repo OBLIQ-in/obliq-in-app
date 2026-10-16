@@ -5,10 +5,14 @@
 ```text
 src/
   app/
-    layout.tsx              Persistent dashboard instance and page metadata
-    page.tsx                Home route
-    [section]/page.tsx      Section validation and 404 handling
+    layout.tsx              HTML shell and default metadata
+    (dashboard)/
+      layout.tsx            Persistent dashboard instance
+      page.tsx              Home route
+      [section]/page.tsx    Section validation and 404 handling
+    login/page.tsx          Login and sign-up links, outside the dashboard
     globals.css             Stylesheet imports
+  middleware.ts             Auth0 routes and redirect to /login when login is on
   components/
     dashboard-app.tsx       Navigation, search, dialogs, and screen selection
     dashboard/
@@ -34,6 +38,9 @@ src/
     timer-state.ts          Timer snapshot validation, persistence, and duration
     use-timer.ts            Selected project and running or stopped session
     use-dialog.ts           Focus trap, Escape, and focus restoration
+    auth/config.ts          Login switch, public paths, and safe return paths
+    auth/auth0.ts           Auth0 client, created on first use
+    auth/session.ts         Signed-in user as a provider-neutral AuthUser
   styles/                   Base, shell, home, shared UI, pages, dialogs, breakpoints
 tests/
   storage-validation.test.mjs
@@ -76,6 +83,12 @@ To connect an API, implement these methods and export that implementation as `wo
 The current `main` branch has no endpoints or authentication contract. This PR does not assume endpoint paths, a database, or a session mechanism. For v1 the source returns a workspace snapshot. When collections become large, fetch and paginate them by screen rather than loading every record.
 
 When records come from the server, fetch initial data in route pages and move the corresponding screen rendering there. Keep timer and navigation state in the shared layout. Do not import credentials or server modules into a client hook.
+
+## Login
+
+Login is behind `AUTH_ENABLED` and off by default. When it is on, `middleware.ts` lets the Auth0 SDK handle `/auth/login`, `/auth/logout` and `/auth/callback`, and sends signed-out visitors to `/login?returnTo=<path>`. Return paths are limited to paths on this site.
+
+Server code reads the signed-in person with `getAuthUser()`, which returns `{ provider, providerUserId, email, name }` and no Auth0 types. `provider` and `providerUserId` are the key of the backend's `user_identities` table, so a different provider only needs a new `getAuthUser()`.
 
 ## Working rules
 
