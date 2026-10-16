@@ -103,21 +103,9 @@ export async function changeStatus(
   id: string,
   status: EngagementStatus,
 ) {
-  checkId(id);
   const { firmId, userId } = session;
   await getDb().transaction(async (tx) => {
-    // Lock the row so two status changes can't both pass the check.
-    const [engagement] = await tx
-      .select({
-        status: engagements.status,
-        title: engagements.title,
-        reviewerId: engagements.reviewerId,
-      })
-      .from(engagements)
-      .where(and(eq(engagements.firmId, firmId), eq(engagements.id, id)))
-      .for("update");
-    if (!engagement || !canSeeEngagement(session, engagement.reviewerId))
-      throw new NotFoundError("Engagement not found");
+    const engagement = await lockEngagement(tx, session, id);
     if (!canChangeStatus(session, engagement.reviewerId))
       throw new ForbiddenError("Only the owner or the reviewer can do this");
     const from = engagement.status;
@@ -146,6 +134,29 @@ export async function changeStatus(
     });
   });
   return getEngagement(session, id);
+}
+
+// Loads an engagement the session can see and locks its row until the
+// transaction ends, so concurrent changes can't both pass their checks.
+export async function lockEngagement(
+  tx: Transaction,
+  session: FirmSession,
+  id: string,
+) {
+  checkId(id);
+  const [engagement] = await tx
+    .select({
+      id: engagements.id,
+      status: engagements.status,
+      title: engagements.title,
+      reviewerId: engagements.reviewerId,
+    })
+    .from(engagements)
+    .where(and(eq(engagements.firmId, session.firmId), eq(engagements.id, id)))
+    .for("update");
+  if (!engagement || !canSeeEngagement(session, engagement.reviewerId))
+    throw new NotFoundError("Engagement not found");
+  return engagement;
 }
 
 // A malformed ID can't match anything, so it gets the same 404.

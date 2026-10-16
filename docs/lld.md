@@ -51,6 +51,9 @@ src/
     engagements/rules.ts    Status lifecycle and who can see or change an engagement
     engagements/input.ts    Engagement request validation
     engagements/service.ts  Engagement queries and writes, with audit events
+    share/tokens.ts         Share tokens, hashing, client session cookie, client IP
+    share/rate-limit.ts     Postgres fixed-window rate limiter
+    share/service.ts        Client-share links (firm side) and client sessions
 drizzle/                    Generated SQL migrations; commit with schema changes
 tests/
   client/                   Browser-side state; run with npm run test:client
@@ -58,6 +61,7 @@ tests/
   server/                   Data, validation, and API; run with npm run test:server
     api-workspace-source.test.mjs
     engagement-rules.test.mjs
+    share-tokens.test.mjs
     storage-validation.test.mjs
     workspace-input.test.mjs
     workspace-source.test.mjs
@@ -128,6 +132,25 @@ An engagement is the audit work for one client and financial year (#30). Working
 - **Lifecycle.** Draft → Active or Archived; Active → Review or Archived; Review → Active (sent back) or Complete; Complete → Archived. Other moves return 409.
 - **Access.** Owners see and change every engagement in the firm. Reviewers see and change only the ones they review, and can only create engagements they review. Articles see none until assignment is added (#35). An engagement the user can't see returns 404, like one that doesn't exist. #29 will move these checks into one `can()`.
 - **Same firm, enforced by the database.** Composite foreign keys tie an engagement's `(firm_id, client_id)` to `clients` and `(firm_id, reviewer_id)` to `firm_members`, so a client or reviewer from another firm is rejected even if the code has a bug.
+
+### Client-share links
+
+A firm shares one engagement with its client through a link (#33). v1 uses a bearer link: the firm copies it and sends it themselves. An OTP step can be added once email delivery exists.
+
+| Route                                                     | Body                 | Who                      |
+| --------------------------------------------------------- | -------------------- | ------------------------ |
+| `GET /api/engagements/{engagementId}/share-links`         |                      | Owner, assigned reviewer |
+| `POST /api/engagements/{engagementId}/share-links`        | `{ expiresInDays? }` | Owner, assigned reviewer |
+| `DELETE /api/engagements/{engagementId}/share-links/{id}` |                      | Owner, assigned reviewer |
+| `POST /api/share/open`                                    | `{ token }`          | Anyone with the link     |
+| `GET /api/share/session`, `DELETE /api/share/session`     |                      | The client's session     |
+
+- **Tokens.** 256-bit random, base64url. Only the SHA-256 hash is stored, and the token appears once, in the create response, with the path `/share/{token}`. Links expire after 1–30 days (7 by default). Revoking is immediate and can be repeated safely.
+- **Opening.** `POST /api/share/open` swaps the link token for a client session: a second random token whose hash is in `share_sessions`, sent as the `obliq_share` cookie (HttpOnly, SameSite=Strict, Secure in production, `Path=/api/share`). A session lasts 12 hours and never outlives its link. Every request checks the session, its link and the engagement again, so revoking the link, its expiry, or moving the engagement to Complete or Archived ends access at once.
+- **Scope.** Every link opens the engagement's single `client_share` workspace. The client view (`ClientWorkspace`) is built by its own query and holds only the firm, client, engagement title and year. A client session is never a firm session: `getSession()` doesn't read the share cookie, so firm routes return 401.
+- **Failures look the same.** A wrong, expired or revoked token, or a closed engagement, all return 404 with one message. A real link used after it stopped working writes `share_link.denied`.
+- **Rate limit.** 20 open attempts per 15 minutes per client address, counted in `rate_limits`, so every server instance shares the count. Addresses are hashed before storage. Over the limit returns 429 with `Retry-After`.
+- **Audit.** `share_link.created`, `share_link.revoked`, `share_link.opened` and `share_link.denied`. Client events have no `actor_user_id`; `details` holds the hashed address.
 
 ### Audit events
 

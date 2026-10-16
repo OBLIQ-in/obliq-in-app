@@ -6,6 +6,7 @@ import {
   ForbiddenError,
   InputError,
   NotFoundError,
+  RateLimitError,
 } from "./errors";
 
 type Params = Record<string, string>;
@@ -37,26 +38,37 @@ export function route<P extends Params = Params>(
         { status },
       );
     } catch (error) {
-      if (error instanceof ZodError)
-        return Response.json(
-          {
-            error: "Invalid input",
-            fields: error.issues.map((issue) => issue.path.join(".")),
-          },
-          { status: 400 },
-        );
-      if (error instanceof SyntaxError)
-        return Response.json({ error: "Invalid JSON" }, { status: 400 });
-      if (error instanceof InputError)
-        return Response.json({ error: error.message }, { status: 400 });
-      if (error instanceof ConflictError)
-        return Response.json({ error: error.message }, { status: 409 });
-      if (error instanceof NotFoundError)
-        return Response.json({ error: error.message }, { status: 404 });
-      if (error instanceof ForbiddenError)
-        return Response.json({ error: error.message }, { status: 403 });
-      console.error(error);
-      return Response.json({ error: "Something went wrong" }, { status: 500 });
+      return errorResponse(error);
     }
   };
+}
+
+// Turns a thrown error into the JSON response clients expect. Unknown errors
+// are logged and hidden behind a generic 500.
+export function errorResponse(error: unknown) {
+  if (error instanceof ZodError)
+    return Response.json(
+      {
+        error: "Invalid input",
+        fields: error.issues.map((issue) => issue.path.join(".")),
+      },
+      { status: 400 },
+    );
+  if (error instanceof SyntaxError)
+    return Response.json({ error: "Invalid JSON" }, { status: 400 });
+  if (error instanceof InputError)
+    return Response.json({ error: error.message }, { status: 400 });
+  if (error instanceof ConflictError)
+    return Response.json({ error: error.message }, { status: 409 });
+  if (error instanceof NotFoundError)
+    return Response.json({ error: error.message }, { status: 404 });
+  if (error instanceof ForbiddenError)
+    return Response.json({ error: error.message }, { status: 403 });
+  if (error instanceof RateLimitError)
+    return Response.json(
+      { error: error.message },
+      { status: 429, headers: { "retry-after": "900" } },
+    );
+  console.error(error);
+  return Response.json({ error: "Something went wrong" }, { status: 500 });
 }

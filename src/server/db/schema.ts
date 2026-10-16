@@ -344,6 +344,10 @@ export const engagementWorkspaces = pgTable(
     uniqueIndex("engagement_workspaces_internal_idx")
       .on(table.engagementId)
       .where(sql`${table.kind} = 'internal'`),
+    // And at most one client-share workspace, shared by all its links.
+    uniqueIndex("engagement_workspaces_client_share_idx")
+      .on(table.engagementId)
+      .where(sql`${table.kind} = 'client_share'`),
   ],
 );
 
@@ -359,9 +363,9 @@ export const auditEvents = pgTable(
       .notNull()
       .references(() => firms.id),
     engagementId: uuid("engagement_id"),
-    actorUserId: uuid("actor_user_id")
-      .notNull()
-      .references(() => users.id),
+    // Null when a client acted through a share link; `details` then names
+    // the link.
+    actorUserId: uuid("actor_user_id").references(() => users.id),
     // Dotted names such as `engagement.created`, as in #49.
     action: text("action").notNull(),
     entityType: text("entity_type").notNull(),
@@ -380,5 +384,65 @@ export const auditEvents = pgTable(
       columns: [table.firmId, table.engagementId],
       foreignColumns: [engagements.firmId, engagements.id],
     }),
+  ],
+);
+
+// A link the firm sends a client to open the engagement's client-share
+// workspace (#33). All of an engagement's links open the same workspace. Only the token's SHA-256 hash is stored; the token itself
+// is shown once, when the link is created.
+export const shareLinks = pgTable(
+  "share_links",
+  {
+    id: id(),
+    firmId: firmId(),
+    engagementId: uuid("engagement_id").notNull(),
+    tokenHash: text("token_hash").notNull().unique(),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => users.id),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    revokedBy: uuid("revoked_by").references(() => users.id),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    index("share_links_engagement_idx").on(table.engagementId),
+    foreignKey({
+      name: "share_links_engagement_fk",
+      columns: [table.firmId, table.engagementId],
+      foreignColumns: [engagements.firmId, engagements.id],
+    }).onDelete("cascade"),
+  ],
+);
+
+// A client's browser session after opening a share link. It is only valid
+// while its link is, so revoking the link ends every session at once.
+export const shareSessions = pgTable(
+  "share_sessions",
+  {
+    id: id(),
+    shareLinkId: uuid("share_link_id")
+      .notNull()
+      .references(() => shareLinks.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull().unique(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [index("share_sessions_link_idx").on(table.shareLinkId)],
+);
+
+// Fixed-window counters for rate limiting, shared by every server instance.
+// `key` holds a hash, never a raw IP address.
+export const rateLimits = pgTable(
+  "rate_limits",
+  {
+    key: text("key").notNull(),
+    windowStart: timestamp("window_start", { withTimezone: true }).notNull(),
+    count: integer("count").notNull().default(0),
+  },
+  (table) => [
+    primaryKey({ columns: [table.key, table.windowStart] }),
+    index("rate_limits_window_idx").on(table.windowStart),
   ],
 );

@@ -58,3 +58,13 @@ export function canChangeStatus(member: Member, reviewerId: string) {
     member.role !== "article_assistant" && canSeeEngagement(member, reviewerId)
   );
 }
+
+// Owners and the engagement's reviewer create and revoke client-share links.
+export function canShare(member: Member, reviewerId: string) {
+  return canChangeStatus(member, reviewerId);
+}
+
+// Clients can only open an engagement that is still being worked on.
+export function isOpenToClients(status: EngagementStatus) {
+  return status === "Draft" || status === "Active" || status === "Review";
+}

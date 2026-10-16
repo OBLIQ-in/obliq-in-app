@@ -1,5 +1,4 @@
 import "server-only";
-import type { FirmSession } from "./auth/session";
 import { auditEvents } from "./db/schema";
 import type { Transaction } from "./errors";
 
@@ -12,16 +11,19 @@ type AuditEvent = {
   details?: Record<string, unknown>;
 };
 
+// Who acted: a firm session, or a client through a share link (no user).
+type Actor = { firmId: string; userId: string | null };
+
 // Writes the event in the caller's transaction, so the change and its audit
 // event are saved together or not at all.
 export async function recordAudit(
   tx: Transaction,
-  session: FirmSession,
+  actor: Actor,
   event: AuditEvent,
 ) {
   await tx.insert(auditEvents).values({
-    firmId: session.firmId,
-    actorUserId: session.userId,
+    firmId: actor.firmId,
+    actorUserId: actor.userId,
     ...event,
   });
 }

@@ -16,6 +16,9 @@ export class NotFoundError extends Error {}
 // The user can see the record but their role can't make this change.
 export class ForbiddenError extends Error {}
 
+// Too many attempts from one address; the client should wait.
+export class RateLimitError extends Error {}
+
 export type Transaction = Parameters<
   Parameters<ReturnType<typeof getDb>["transaction"]>[0]
 >[0];
