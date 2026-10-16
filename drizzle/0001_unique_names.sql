@@ -1,0 +1,2 @@
+CREATE UNIQUE INDEX "clients_firm_name_idx" ON "clients" USING btree ("firm_id",lower("name"));--> statement-breakpoint
+CREATE UNIQUE INDEX "projects_client_name_idx" ON "projects" USING btree ("client_id",lower("name"));
