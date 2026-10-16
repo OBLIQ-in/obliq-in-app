@@ -95,7 +95,7 @@ export default function DashboardApp({ children }: { children: ReactNode }) {
       if (session && session.seconds > 0) {
         setSavingTime(true);
         try {
-          await workspace.saveTime(session.project.name, session.seconds);
+          await workspace.saveTime(session.project.id, session.seconds);
           timer.reset();
           setToast("Time session saved");
         } catch {
