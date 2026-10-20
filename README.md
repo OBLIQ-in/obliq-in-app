@@ -30,3 +30,7 @@ V1 uses sample data and browser storage. Authentication, backend endpoints, emai
 `WorkspaceSource` defines async `load`, `create`, and `saveTime` methods. The local implementation is in `src/lib/workspace-source.ts`; the screens access it through `useWorkspace`. Replace the exported source with an API implementation when the backend contract is available. Forms await successful saves, prevent repeat submissions while saving, and keep input when a request fails. Loading failures have a Retry action; failed time saves retain the duration for retry.
 
 See [the LLD](docs/lld.md) for the file structure, adapter contract, and integration steps.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for branches, commits, pull requests, and labels.
