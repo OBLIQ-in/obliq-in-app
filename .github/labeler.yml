@@ -1,0 +1,46 @@
+v1-frontend:
+  - changed-files:
+      - any-glob-to-any-file:
+          - src/app/**
+          - src/components/**
+          - src/styles/**
+
+v1-workspace:
+  - changed-files:
+      - any-glob-to-any-file:
+          - src/lib/workspace-*
+          - src/types/**
+          - src/data/**
+
+v1-api:
+  - changed-files:
+      - any-glob-to-any-file:
+          - src/app/api/**
+          - src/server/**
+          - drizzle/**
+
+v1-storage:
+  - changed-files:
+      - any-glob-to-any-file:
+          - src/lib/storage*
+          - src/server/storage/**
+
+v1-security:
+  - changed-files:
+      - any-glob-to-any-file:
+          - next.config.ts
+          - src/middleware.ts
+          - src/server/auth/**
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - docs/**
+          - "**/*.md"
+          - "!.github/**"
+
+enhancement:
+  - head-branch: ["^feat/", "^feature/"]
+
+bug:
+  - head-branch: ["^fix/", "^bugfix/"]
