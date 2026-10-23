@@ -5,6 +5,7 @@ import {
   CircleDollarSign,
   ClipboardList,
   Clock3,
+  FolderUp,
   Headset,
   Home,
   Landmark,
@@ -29,6 +30,7 @@ const icons: Record<Route, typeof Home> = {
   balance: CircleDollarSign,
   accounting: LineChart,
   taxes: Landmark,
+  "client-portal": FolderUp,
   settings: Home,
 };
 const navigation = (["features", "tools"] as const).map((group) =>

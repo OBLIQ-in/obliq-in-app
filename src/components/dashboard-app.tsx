@@ -27,6 +27,7 @@ import { AccountingPage } from "@/components/dashboard/pages/accounting";
 import { BalancePage } from "@/components/dashboard/pages/balance";
 import { ClientsPage } from "@/components/dashboard/pages/clients";
 import { DocumentsPage } from "@/components/dashboard/pages/documents";
+import { ClientPortalPage } from "@/components/dashboard/pages/client-portal";
 import { InvoicesPage } from "@/components/dashboard/pages/invoices";
 import { ProjectsPage } from "@/components/dashboard/pages/projects";
 import { SettingsPage } from "@/components/dashboard/pages/settings";
@@ -34,6 +35,7 @@ import { TaxesPage } from "@/components/dashboard/pages/taxes";
 import { TimePage } from "@/components/dashboard/pages/time";
 import { ProjectDrawer } from "@/components/dashboard/project-drawer";
 import { WorkspaceModal } from "@/components/dashboard/workspace-modal";
+import { toPublicClientInstructions } from "@/lib/workspace-source";
 import type { FormValues, ModalKind, Project } from "@/types/workspace";
 
 export default function DashboardApp({ children }: { children: ReactNode }) {
@@ -302,6 +304,15 @@ export default function DashboardApp({ children }: { children: ReactNode }) {
             documents={documents}
             openModal={setModal}
             query={query}
+            instructions={workspace.instructions}
+            saveInstructions={workspace.saveInstructions}
+            navigate={navigate}
+          />
+        )}
+        {ready && route === "client-portal" && (
+          <ClientPortalPage
+            instructions={toPublicClientInstructions(workspace.instructions)}
+            onBackToFirm={() => navigate("contracts")}
           />
         )}
         {ready && route === "balance" && (

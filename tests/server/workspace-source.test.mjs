@@ -46,3 +46,35 @@ test("ignores corrupt storage and can save a time session afterwards", async () 
   const saved = await source.saveTime(loaded.projects[0].name, 42);
   assert.equal(saved.entries[0].seconds, 42);
 });
+
+test("saves and reloads client instructions with firm notes", async () => {
+  const records = new Map();
+  const storage = {
+    getItem: (key) => records.get(key) || null,
+    setItem: (key, value) => records.set(key, value),
+  };
+  const source = createLocalWorkspace(() => storage);
+  await source.load();
+  await source.saveInstructions(
+    "Please upload GST bills",
+    "Confidential reviewer checklist",
+  );
+  const reloaded = await createLocalWorkspace(() => storage).load();
+  assert.equal(reloaded.instructions.instructions, "Please upload GST bills");
+  assert.equal(
+    reloaded.instructions.internalNotes,
+    "Confidential reviewer checklist",
+  );
+});
+
+test("falls back to default instructions when stored instructions are corrupt", async () => {
+  const source = createLocalWorkspace(() => ({
+    getItem: (key) =>
+      key === "obliq-preview-instructions-v1" ? '{"corrupt":true}' : null,
+    setItem: () => {},
+  }));
+  const loaded = await source.load();
+  assert.ok(loaded.instructions.title);
+  assert.ok(loaded.instructions.instructions.length > 0);
+  assert.ok(loaded.instructions.internalNotes.length > 0);
+});

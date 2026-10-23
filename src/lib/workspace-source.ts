@@ -7,8 +7,22 @@ import {
   validDocuments,
   validActivity,
   validTimeEntries,
+  validClientInstructions,
 } from "./storage-validation.ts";
-import type { WorkspaceData, WorkspaceSource } from "@/types/workspace";
+import type {
+  ClientInstructions,
+  PublicClientInstructions,
+  WorkspaceData,
+  WorkspaceSource,
+} from "@/types/workspace";
+
+// Explicit projection constructing the public view model without internalNotes.
+export function toPublicClientInstructions(
+  record: ClientInstructions,
+): PublicClientInstructions {
+  const { id, title, instructions, updatedAt } = record;
+  return { id, title, instructions, updatedAt };
+}
 
 type Storage = {
   getItem: (key: string) => string | null;
@@ -25,6 +39,7 @@ export function createLocalWorkspace(
     documents: dashboard.documents,
     activity: dashboard.activity,
     entries: [],
+    instructions: dashboard.instructions,
   };
 
   function read<T>(
@@ -77,6 +92,11 @@ export function createLocalWorkspace(
         documents: read("documents", data.documents, validDocuments),
         activity: read("activity", data.activity, validActivity),
         entries: read("time", data.entries, validTimeEntries),
+        instructions: read(
+          "instructions",
+          data.instructions,
+          validClientInstructions,
+        ),
       };
       return data;
     },
@@ -157,6 +177,20 @@ export function createLocalWorkspace(
         write("documents", data.documents);
         addActivity(`created a ${kind} for`, values.client);
       }
+      return data;
+    },
+    async saveInstructions(instructions, internalNotes) {
+      data = {
+        ...data,
+        instructions: {
+          ...data.instructions,
+          instructions,
+          internalNotes,
+          updatedAt: todayISO(),
+        },
+      };
+      write("instructions", data.instructions);
+      addActivity("updated client instructions", data.instructions.title);
       return data;
     },
     async saveTime(project, seconds) {
