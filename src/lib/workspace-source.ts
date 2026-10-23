@@ -14,10 +14,8 @@ import type {
   Invoice,
   Client,
 } from "@/types/workspace";
-import {
-  parseRevenueSpreadsheet,
-  ParsedRevenueData,
-} from "@/lib/spreadsheet-parser.ts";
+import { parseRevenueSpreadsheet } from "./spreadsheet-parser.ts";
+import type { ParsedRevenueData } from "./spreadsheet-parser.ts";
 
 type Storage = {
   getItem: (key: string) => string | null;
