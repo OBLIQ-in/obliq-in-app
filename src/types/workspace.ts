@@ -96,4 +96,12 @@ export type WorkspaceSource = {
   load: () => Promise<WorkspaceData>;
   create: (kind: ModalKind, values: FormValues) => Promise<WorkspaceData>;
   saveTime: (project: string, seconds: number) => Promise<WorkspaceData>;
+  importSpreadsheet: (file: File) => Promise<{
+    status: "success" | "failed";
+    errorCount: number;
+    canComplete: boolean;
+    importedRows: number;
+    importedClients: string[];
+    importedInvoices: string[];
+  }>;
 };

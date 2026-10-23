@@ -1,0 +1,9 @@
+id,date,amount,client,description
+INV-001,2026-10-01,5000,Northstar Retail,Q4 retainer
+INV-002,2026-10-02,3750,Meridian Labs,Compliance review
+INV-003,invalid-date,2500,Aster Foods,
+INV-004,,4200,Bluepeak Systems,Invoice #123
+INV-005,2026-10-05,-100,Northstar Retail,Credit note
+INV-006,2026-10-06,abc,Meridian Labs,Invalid amount
+INV-007,2026-10-07,8000,
+Total,sum,15250,,

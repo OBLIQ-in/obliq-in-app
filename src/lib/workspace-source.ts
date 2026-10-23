@@ -8,7 +8,16 @@ import {
   validActivity,
   validTimeEntries,
 } from "./storage-validation.ts";
-import type { WorkspaceData, WorkspaceSource } from "@/types/workspace";
+import type {
+  WorkspaceData,
+  WorkspaceSource,
+  Invoice,
+  Client,
+} from "@/types/workspace";
+import {
+  parseRevenueSpreadsheet,
+  ParsedRevenueData,
+} from "@/lib/spreadsheet-parser.ts";
 
 type Storage = {
   getItem: (key: string) => string | null;
@@ -175,6 +184,67 @@ export function createLocalWorkspace(
       write("time", data.entries);
       addActivity("recorded time on", project);
       return data;
+    },
+    async importSpreadsheet(file: File) {
+      const fileData = await file.arrayBuffer();
+      const fileName = file.name;
+      const parsed: ParsedRevenueData = parseRevenueSpreadsheet(
+        Buffer.from(fileData),
+        fileName,
+      );
+
+      // Import valid rows as invoices
+      const importedInvoices: Invoice[] = [];
+      const importedClients: string[] = [];
+      let errorCount = 0;
+
+      parsed.rows.forEach((row) => {
+        const invoice: Invoice = {
+          id: row.id,
+          client: row.client,
+          amount: row.amount,
+          due: row.date,
+          status: "Draft",
+          description: row.description,
+        };
+        importedInvoices.push(invoice);
+        if (!importedClients.includes(row.client)) {
+          importedClients.push(row.client);
+        }
+      });
+
+      errorCount = parsed.errors.length;
+
+      // Update workspace data
+      data = {
+        ...data,
+        invoices: [...importedInvoices, ...data.invoices],
+        clients: [
+          ...importedClients.map(
+            (clientName) =>
+              ({
+                id: `CL-${crypto.randomUUID().slice(0, 8)}`,
+                name: clientName,
+                contact: "",
+                email: "",
+                projects: 0,
+                status: "Active",
+              }) as Client,
+          ),
+          ...data.clients,
+        ],
+      };
+
+      const canComplete = errorCount === 0 || parsed.totalMatch;
+
+      return {
+        status: canComplete ? "success" : "failed",
+        errorCount,
+        canComplete,
+        importedRows: parsed.rows.length,
+        importedClients,
+        importedInvoices: importedInvoices.map((inv) => inv.id),
+      };
     },
   };
 }
