@@ -1,0 +1,3 @@
+# Require review from security lead for auth and storage changes
+/auth/** @Naman-iitm
+/storage/** @Naman-iitm
