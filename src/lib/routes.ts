@@ -10,6 +10,7 @@ export const pages = [
   { label: "Balance", slug: "balance", group: "tools" },
   { label: "Accounting", slug: "accounting", group: "tools" },
   { label: "Taxes", slug: "taxes", group: "tools" },
+  { label: "Client portal", slug: "client-portal", group: "tools" },
   { label: "Profile & settings", slug: "settings", group: "account" },
 ] as const;
 
