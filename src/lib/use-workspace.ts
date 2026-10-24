@@ -43,8 +43,8 @@ export function useWorkspace(source: WorkspaceSource = workspaceSource) {
     setData(await source.create(kind, values));
   }
 
-  async function saveTime(project: string, seconds: number) {
-    setData(await source.saveTime(project, seconds));
+  async function saveTime(projectId: string, seconds: number) {
+    setData(await source.saveTime(projectId, seconds));
   }
 
   return { ...data, loading, error, reload, create, saveTime };

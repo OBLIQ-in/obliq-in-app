@@ -12,15 +12,16 @@ import {
   timeEntries,
   users,
 } from "../db/schema";
+import { clientTaken, projectTaken } from "@/lib/workspace-error";
+import { recordAudit } from "../audit";
+import {
+  ConflictError,
+  InputError,
+  uniqueViolation,
+  type Transaction,
+} from "../errors";
 import type { RecordInput } from "./input";
 import { toActivityItem, toISODate } from "./mappers";
-
-type Transaction = Parameters<
-  Parameters<ReturnType<typeof getDb>["transaction"]>[0]
->[0];
-
-// A request that is well formed but refers to something the firm doesn't have.
-export class InputError extends Error {}
 
 // Every query is scoped to the session's firm. Never take a firm ID from the
 // request body.
@@ -136,17 +137,43 @@ export async function loadWorkspace(
 }
 
 export async function createRecord(session: FirmSession, input: RecordInput) {
+  try {
+    await insertRecord(session, input);
+  } catch (error) {
+    const index = uniqueViolation(error);
+    if (index === "clients_firm_name_idx")
+      throw new ConflictError(clientTaken(input.values.title));
+    if (index === "projects_client_name_idx" && input.kind === "project")
+      throw new ConflictError(
+        projectTaken(input.values.title, await clientName(input.values)),
+      );
+    throw error;
+  }
+  return loadWorkspace(session);
+}
+
+async function insertRecord(session: FirmSession, input: RecordInput) {
   const { firmId, userId } = session;
   await getDb().transaction(async (tx) => {
     const log = (action: string, subject: string) =>
       tx.insert(activity).values({ firmId, userId, action, subject });
     if (input.kind === "client") {
       const { title, contact, email } = input.values;
-      await tx.insert(clients).values({ firmId, name: title, contact, email });
+      const [client] = await tx
+        .insert(clients)
+        .values({ firmId, name: title, contact, email })
+        .returning({ id: clients.id });
       await log("added a client", title);
+      await recordAudit(tx, session, {
+        action: "client.created",
+        entityType: "client",
+        entityId: client.id,
+        details: { name: title },
+      });
       return;
     }
-    const clientId = await findClient(tx, firmId, input.values.client);
+    const client = await findClient(tx, firmId, input.values.clientId);
+    const clientId = client.id;
     if (input.kind === "project") {
       const { title, due } = input.values;
       await tx.insert(projects).values({
@@ -162,7 +189,7 @@ export async function createRecord(session: FirmSession, input: RecordInput) {
       await tx
         .insert(invoices)
         .values({ firmId, clientId, description: title, amount, due });
-      await log("saved an invoice draft for", input.values.client);
+      await log("saved an invoice draft for", client.name);
     } else {
       await tx.insert(documents).values({
         firmId,
@@ -170,24 +197,23 @@ export async function createRecord(session: FirmSession, input: RecordInput) {
         title: input.values.title,
         type: documentTypes[input.kind],
       });
-      await log(`created a ${input.kind} for`, input.values.client);
+      await log(`created a ${input.kind} for`, client.name);
     }
   });
-  return loadWorkspace(session);
 }
 
 export async function saveTime(
   session: FirmSession,
-  input: { project: string; seconds: number },
+  input: { projectId: string; seconds: number },
 ) {
   const { firmId, userId } = session;
   await getDb().transaction(async (tx) => {
-    // The timer sends the project name today; switch to the ID with #7.
     const [project] = await tx
-      .select({ id: projects.id })
+      .select({ id: projects.id, name: projects.name })
       .from(projects)
-      .where(and(eq(projects.firmId, firmId), eq(projects.name, input.project)))
-      .limit(1);
+      .where(
+        and(eq(projects.firmId, firmId), eq(projects.id, input.projectId)),
+      );
     if (!project) throw new InputError("Unknown project");
     await tx.insert(timeEntries).values({
       firmId,
@@ -200,7 +226,7 @@ export async function saveTime(
       firmId,
       userId,
       action: "recorded time on",
-      subject: input.project,
+      subject: project.name,
     });
   });
   return loadWorkspace(session);
@@ -212,15 +238,22 @@ const documentTypes = {
   form: "Form",
 } as const;
 
-// Forms pick clients by name today; switch to the ID with #7.
-async function findClient(tx: Transaction, firmId: string, name: string) {
+// An ID from another firm is treated the same as one that doesn't exist.
+async function findClient(tx: Transaction, firmId: string, id: string) {
   const [client] = await tx
-    .select({ id: clients.id })
+    .select({ id: clients.id, name: clients.name })
     .from(clients)
-    .where(and(eq(clients.firmId, firmId), eq(clients.name, name)))
-    .limit(1);
+    .where(and(eq(clients.firmId, firmId), eq(clients.id, id)));
   if (!client) throw new InputError("Unknown client");
-  return client.id;
+  return client;
+}
+
+async function clientName(values: { clientId: string }) {
+  const [client] = await getDb()
+    .select({ name: clients.name })
+    .from(clients)
+    .where(eq(clients.id, values.clientId));
+  return client?.name ?? "This client";
 }
 
 function initials(name: string) {
