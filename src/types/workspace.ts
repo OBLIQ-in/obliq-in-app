@@ -82,6 +82,20 @@ export type FormValues = {
   email: string;
 };
 
+export type ClientInstructions = {
+  id: string;
+  title: string;
+  instructions: string;
+  internalNotes: string;
+  updatedAt: string;
+};
+
+// Public client-facing view model strictly omitting internalNotes.
+export type PublicClientInstructions = Omit<
+  ClientInstructions,
+  "internalNotes"
+>;
+
 export type WorkspaceData = {
   projects: Project[];
   clients: Client[];
@@ -89,11 +103,16 @@ export type WorkspaceData = {
   documents: Document[];
   activity: ActivityItem[];
   entries: TimeEntry[];
+  instructions: ClientInstructions;
 };
 
 // API adapters return the records accepted by the existing screens.
 export type WorkspaceSource = {
   load: () => Promise<WorkspaceData>;
   create: (kind: ModalKind, values: FormValues) => Promise<WorkspaceData>;
+  saveInstructions: (
+    instructions: string,
+    internalNotes: string,
+  ) => Promise<WorkspaceData>;
   saveTime: (project: string, seconds: number) => Promise<WorkspaceData>;
 };

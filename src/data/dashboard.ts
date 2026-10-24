@@ -1,6 +1,7 @@
 import type {
   ActivityItem,
   Client,
+  ClientInstructions,
   Document,
   Invoice,
   Metric,
@@ -19,6 +20,7 @@ type DashboardData = {
   invoices: Invoice[];
   documents: Document[];
   activity: ActivityItem[];
+  instructions: ClientInstructions;
 };
 
 // Static fixtures for the local preview.
@@ -260,4 +262,13 @@ export const dashboard = {
       type: "invoice",
     },
   ],
+  instructions: {
+    id: "INST-01",
+    title: "Year-End Financial & Audit Evidence Submission",
+    instructions:
+      "Please submit all requested financial records, bank statements, sales registers, and purchase vouchers for the current audit period.\n\n• Filenames can be arbitrary (e.g., scan001.pdf, bank_stmt_final.jpg, receipt.png).\n• You may submit documents as individual files or combined into a single compiled PDF.\n• Supported document formats: PDF (.pdf), JPEG (.jpg, .jpeg), and PNG (.png).",
+    internalNotes:
+      "Reviewer checklist: Verify bank statements against trial balance. Cross-check high-value invoices with GST 2B portal before approving. Ensure no DSC keys are uploaded.",
+    updatedAt: "2026-10-15",
+  },
 } satisfies DashboardData;

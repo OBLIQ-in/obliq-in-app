@@ -7,6 +7,7 @@ import {
   validDocuments,
   validActivity,
   validTimeEntries,
+  validClientInstructions,
 } from "../../src/lib/storage-validation.ts";
 
 test("rejects storage that is not a record array", () => {
@@ -70,4 +71,37 @@ test("rejects an unknown priority or a team that is not a list of names", () => 
   assert.equal(validProjects([{ ...project, priority: "Urgent" }]), false);
   assert.equal(validProjects([{ ...project, team: "NK" }]), false);
   assert.equal(validProjects([{ ...project, team: ["NK", 3] }]), false);
+});
+
+const instructionsFixture = {
+  id: "INST-1",
+  title: "Tax submission",
+  instructions: "Submit invoices",
+  internalNotes: "Private audit notes",
+  updatedAt: "2026-10-10",
+};
+
+test("validClientInstructions accepts valid instructions record", () => {
+  assert.equal(validClientInstructions(instructionsFixture), true);
+});
+
+test("validClientInstructions rejects malformed records or missing required fields", () => {
+  for (const bad of [null, undefined, "string", [], 123]) {
+    assert.equal(validClientInstructions(bad), false);
+  }
+  for (const field of [
+    "id",
+    "title",
+    "instructions",
+    "internalNotes",
+    "updatedAt",
+  ]) {
+    const incomplete = { ...instructionsFixture };
+    delete incomplete[field];
+    assert.equal(validClientInstructions(incomplete), false);
+  }
+  assert.equal(
+    validClientInstructions({ ...instructionsFixture, internalNotes: 123 }),
+    false,
+  );
 });

@@ -1,6 +1,7 @@
 import type {
   ActivityItem,
   Client,
+  ClientInstructions,
   Document,
   Invoice,
   Project,
@@ -96,3 +97,17 @@ export const validTimeEntries = records<TimeEntry>({
   project: "string",
   seconds: "number",
 });
+
+export const validClientInstructions = (
+  value: unknown,
+): value is ClientInstructions => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const record = value as Record<string, unknown>;
+  return (
+    typeof record.id === "string" &&
+    typeof record.title === "string" &&
+    typeof record.instructions === "string" &&
+    typeof record.internalNotes === "string" &&
+    typeof record.updatedAt === "string"
+  );
+};
