@@ -4,13 +4,16 @@ import { globSync } from "node:fs";
 import os from "node:os";
 import process from "node:process";
 
-const testPattern = "tests/**/*.test.mjs";
+const testPatterns = [
+  "tests/client/**/*.test.mjs",
+  "tests/server/**/*.test.mjs",
+];
 
 // Synchronous file discovery and zero tests handling
-const files = globSync(testPattern);
+const files = testPatterns.flatMap((pattern) => globSync(pattern));
 if (files.length === 0) {
   console.error(
-    `\x1b[31m[Test Runner] No test files matched "${testPattern}".\x1b[0m`,
+    `\x1b[31m[Test Runner] No test files matched "${testPatterns.join(", ")}".\x1b[0m`,
   );
   process.exit(1);
 }
