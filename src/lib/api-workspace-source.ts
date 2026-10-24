@@ -1,4 +1,5 @@
 import type { WorkspaceData, WorkspaceSource } from "@/types/workspace";
+import { WorkspaceConflict } from "./workspace-error.ts";
 
 type Fetch = (url: string, init?: RequestInit) => Promise<Response>;
 
@@ -18,12 +19,16 @@ export function createApiWorkspace(
             body: JSON.stringify(body),
           },
     );
+    if (response.status === 409) {
+      const { error } = (await response.json()) as { error: string };
+      throw new WorkspaceConflict(error);
+    }
     if (!response.ok) throw new Error(`Request failed (${response.status})`);
     return (await response.json()) as WorkspaceData;
   }
   return {
     load: () => call(""),
     create: (kind, values) => call("/records", { kind, values }),
-    saveTime: (project, seconds) => call("/time", { project, seconds }),
+    saveTime: (projectId, seconds) => call("/time", { projectId, seconds }),
   };
 }

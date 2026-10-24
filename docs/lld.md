@@ -39,6 +39,8 @@ src/
   styles/                   Base, shell, home, shared UI, pages, dialogs, breakpoints
   server/                   Server code; never import it from a client component
     http.ts                 Session check and JSON errors for route handlers
+    errors.ts               Errors that http.ts maps to 400, 403, 404 and 409
+    audit.ts                Writes an audit event in the caller's transaction
     auth/session.ts         Current user and firm (development stub until #10)
     db/client.ts            Lazy Postgres connection pool
     db/schema.ts            Tables and enums; source for drizzle/*.sql
@@ -46,12 +48,16 @@ src/
     workspace/input.ts      Request validation for each record kind
     workspace/mappers.ts    Database rows to frontend records
     workspace/service.ts    Firm-scoped queries and writes
+    engagements/rules.ts    Status lifecycle and who can see or change an engagement
+    engagements/input.ts    Engagement request validation
+    engagements/service.ts  Engagement queries and writes, with audit events
 drizzle/                    Generated SQL migrations; commit with schema changes
 tests/
   client/                   Browser-side state; run with npm run test:client
     timer-state.test.mjs
   server/                   Data, validation, and API; run with npm run test:server
     api-workspace-source.test.mjs
+    engagement-rules.test.mjs
     storage-validation.test.mjs
     workspace-input.test.mjs
     workspace-source.test.mjs
@@ -99,11 +105,33 @@ A request goes through three layers:
 
 ### Data model
 
-`users` hold the email (unique, ignoring case), the user type (client or firm, set by onboarding in #11), and when onboarding finished. How a user signs in lives in `user_identities` (`provider`, `provider_user_id`), so Auth0 (#10) can later be replaced by passwords without changing `users`. A `firm_members` row links a user to a firm with the role `owner` or `article_assistant`. `firm_invites` hold the codes owners give assistants (#12).
+`users` hold the email (unique, ignoring case), the user type (client or firm, set by onboarding in #11), and when onboarding finished. How a user signs in lives in `user_identities` (`provider`, `provider_user_id`), so Auth0 (#10) can later be replaced by passwords without changing `users`. A `firm_members` row links a user to a firm with the role `owner`, `reviewer` or `article_assistant` (see #29). `firm_invites` hold the codes owners give assistants (#12).
 
 Every other table has a `firm_id`, and the service takes it from the session, never from the request. Records link to clients and projects by ID. Statuses and document types are Postgres enums whose values match the strings the screens filter on. Activity stores a user ID and a timestamp; the label ("You", "2 hours ago") is worked out when it is read. Dates use India time.
 
-The screens still send client and project names (see #7). The service looks them up within the firm and returns 400 for an unknown name. When the forms send IDs, change `input.ts` and the two lookups in `service.ts`.
+Forms send `clientId` and the timer sends `projectId` (#23). The service looks the ID up within the session's firm and returns 400 if it isn't found, so an ID from another firm looks the same as one that doesn't exist. Names are for display only. Client names are unique within a firm and project names within a client, both ignoring case; a duplicate returns 409 with a message the form shows.
+
+### Engagements
+
+An engagement is the audit work for one client and financial year (#30). Working papers, evidence and client-share links will belong to it.
+
+| Route                                          | Body                                                   | Service            |
+| ---------------------------------------------- | ------------------------------------------------------ | ------------------ |
+| `GET /api/engagements`                         |                                                        | `listEngagements`  |
+| `POST /api/engagements`                        | `{ clientId, title, financialYear, type, reviewerId }` | `createEngagement` |
+| `GET /api/engagements/{engagementId}`          |                                                        | `getEngagement`    |
+| `PATCH /api/engagements/{engagementId}/status` | `{ status }`                                           | `changeStatus`     |
+
+- **Fields.** `financialYear` is an Indian financial year such as `2025-26`. `type` is `Statutory audit`, `Tax audit`, `Internal audit` or `Other`. A client can't have two engagements with the same title in one year (409).
+- **Reviewer.** Every engagement has an assigned reviewer, who must be an `owner` or `reviewer` in the same firm.
+- **Workspace.** Creating an engagement also creates its private `internal` workspace in `engagement_workspaces`, in the same transaction. The client-share workspace (#33) will be a second row with kind `client_share`.
+- **Lifecycle.** Draft → Active or Archived; Active → Review or Archived; Review → Active (sent back) or Complete; Complete → Archived. Other moves return 409.
+- **Access.** Owners see and change every engagement in the firm. Reviewers see and change only the ones they review, and can only create engagements they review. Articles see none until assignment is added (#35). An engagement the user can't see returns 404, like one that doesn't exist. #29 will move these checks into one `can()`.
+- **Same firm, enforced by the database.** Composite foreign keys tie an engagement's `(firm_id, client_id)` to `clients` and `(firm_id, reviewer_id)` to `firm_members`, so a client or reviewer from another firm is rejected even if the code has a bug.
+
+### Audit events
+
+`audit_events` records who did what, for the audit trail, in the format #49 describes: `action` (such as `engagement.created` or `engagement.status_changed`), `entity_type`, `entity_id`, the engagement, the actor and `details`. `recordAudit()` writes it in the same transaction as the change, so neither is saved without the other. A trigger rejects `UPDATE`, `DELETE` and `TRUNCATE`, so the history can't be changed. Because of that, a firm or engagement with audit events can't be deleted; archive it instead. `activity` stays the dashboard's feed.
 
 ### Sessions
 

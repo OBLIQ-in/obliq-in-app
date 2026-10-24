@@ -2,6 +2,11 @@ import { dashboard } from "../data/dashboard.ts";
 import { createApiWorkspace } from "./api-workspace-source.ts";
 import { todayISO } from "./format.ts";
 import {
+  clientTaken,
+  projectTaken,
+  WorkspaceConflict,
+} from "./workspace-error.ts";
+import {
   validProjects,
   validClients,
   validInvoices,
@@ -83,14 +88,31 @@ export function createLocalWorkspace(
     },
     async create(kind, values) {
       const id = crypto.randomUUID().slice(0, 8);
+      const same = (a: string, b: string) =>
+        a.trim().toLowerCase() === b.trim().toLowerCase();
+      if (kind === "client") {
+        if (data.clients.some((item) => same(item.name, values.title)))
+          throw new WorkspaceConflict(clientTaken(values.title));
+      }
+      const client =
+        kind === "client"
+          ? ""
+          : data.clients.find((item) => item.id === values.clientId)?.name;
+      if (client === undefined) throw new Error("Unknown client");
       if (kind === "project") {
+        if (
+          data.projects.some(
+            (item) => item.client === client && same(item.name, values.title),
+          )
+        )
+          throw new WorkspaceConflict(projectTaken(values.title, client));
         data = {
           ...data,
           projects: [
             {
               id: `PRJ-${id}`,
               name: values.title,
-              client: values.client,
+              client,
               status: "Planning",
               progress: 0,
               due: values.due,
@@ -126,7 +148,7 @@ export function createLocalWorkspace(
             {
               id: `INV-${id}`,
               description: values.title,
-              client: values.client,
+              client,
               amount: values.amount,
               due: values.due,
               status: "Draft",
@@ -135,7 +157,7 @@ export function createLocalWorkspace(
           ],
         };
         write("invoices", data.invoices);
-        addActivity("saved an invoice draft for", values.client);
+        addActivity("saved an invoice draft for", client);
       } else {
         data = {
           ...data,
@@ -143,7 +165,7 @@ export function createLocalWorkspace(
             {
               id: `DOC-${id}`,
               title: values.title,
-              client: values.client,
+              client,
               type: {
                 proposal: "Proposal",
                 contract: "Contract",
@@ -156,11 +178,13 @@ export function createLocalWorkspace(
           ],
         };
         write("documents", data.documents);
-        addActivity(`created a ${kind} for`, values.client);
+        addActivity(`created a ${kind} for`, client);
       }
       return data;
     },
-    async saveTime(project, seconds) {
+    async saveTime(projectId, seconds) {
+      const project = data.projects.find((item) => item.id === projectId)?.name;
+      if (project === undefined) throw new Error("Unknown project");
       data = {
         ...data,
         entries: [

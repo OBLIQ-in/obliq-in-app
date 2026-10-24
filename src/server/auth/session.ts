@@ -3,7 +3,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { getDb } from "../db/client";
 import { firmMembers, userIdentities, users } from "../db/schema";
 
-export type Role = "owner" | "article_assistant";
+export type Role = "owner" | "reviewer" | "article_assistant";
 
 // A signed-in user. `firmId` and `role` are null until onboarding (#11)
 // creates or joins a firm.
