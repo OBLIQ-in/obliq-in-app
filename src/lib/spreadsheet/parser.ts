@@ -99,8 +99,12 @@ function metadataErrors(options: SpreadsheetParseOptions) {
   return errors;
 }
 
-function parseCsvRows(text: string): CsvRow[] {
+function parseCsvRows(text: string): {
+  rows: CsvRow[];
+  errors: SpreadsheetError[];
+} {
   const rows: CsvRow[] = [];
+  const errors: SpreadsheetError[] = [];
   let values: string[] = [];
   let field = "";
   let inQuotes = false;
@@ -123,6 +127,18 @@ function parseCsvRows(text: string): CsvRow[] {
     }
 
     if (character === '"') {
+      if (field.length > 0) {
+        errors.push(
+          error(
+            rowNumber,
+            "csv",
+            "csv_syntax",
+            "Stray quote in unquoted CSV cell.",
+          ),
+        );
+        field += character;
+        continue;
+      }
       inQuotes = true;
       continue;
     }
@@ -143,11 +159,17 @@ function parseCsvRows(text: string): CsvRow[] {
     field += character;
   }
 
+  if (inQuotes) {
+    errors.push(
+      error(rowNumber, "csv", "csv_syntax", "Unclosed quote in CSV."),
+    );
+  }
+
   if (field.length > 0 || values.length > 0) {
     values.push(field);
     rows.push({ rowNumber, values });
   }
-  return rows;
+  return { rows, errors };
 }
 
 function normalizeHeader(value: string) {
@@ -255,7 +277,9 @@ export function parseSpreadsheet(
     };
   }
 
-  const csvRows = parseCsvRows(text.replace(/^\uFEFF/, ""));
+  const parsedCsv = parseCsvRows(text.replace(/^\uFEFF/, ""));
+  const csvRows = parsedCsv.rows;
+  initialErrors.push(...parsedCsv.errors);
   const headerRow = csvRows.find((row) =>
     row.values.some((value) => value.trim().length > 0),
   );
@@ -361,6 +385,21 @@ export function parseSpreadsheet(
       );
     } else {
       const totals = checkTotals(rows, options.declaredTotal);
+      if (!totals.match && "error" in totals) {
+        totalErrors.push(
+          error(0, "declaredTotal", "invalid_declared_total", totals.error),
+        );
+        return {
+          meta,
+          rows,
+          errors: [
+            ...initialErrors,
+            ...blankErrors,
+            ...rows.flatMap((row) => row._errors),
+            ...totalErrors,
+          ],
+        };
+      }
       meta.totalDeclared = totals.declared;
       meta.totalDeclaredMinor = totals.declaredMinor;
       meta.totalDelta = totals.delta;

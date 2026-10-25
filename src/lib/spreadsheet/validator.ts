@@ -13,7 +13,8 @@ export type AmountParseResult =
       message: string;
     };
 
-const amountPattern = /^-?(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d{1,2})?$/;
+const amountPattern =
+  /^-?(?:\d+|\d{1,3}(?:,\d{3})+|\d{1,2}(?:,\d{2})*,\d{3})(?:\.\d{1,2})?$/;
 
 export function parseAmountToMinor(value: string): AmountParseResult {
   const trimmed = value.trim();
@@ -79,7 +80,7 @@ export function parseSpreadsheetDate(value: string) {
   if (iso) {
     return toIsoDate(Number(iso[1]), Number(iso[2]), Number(iso[3]));
   }
-  const dayFirst = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(trimmed);
+  const dayFirst = /^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/.exec(trimmed);
   if (dayFirst) {
     return toIsoDate(
       Number(dayFirst[3]),

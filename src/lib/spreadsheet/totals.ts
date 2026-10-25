@@ -7,7 +7,10 @@ export function checkTotals(
 ): TotalsCheck {
   const declared = parseAmountToMinor(String(declaredTotal));
   if (!declared.ok) {
-    throw new Error(`Invalid declared total: ${declared.message}`);
+    return {
+      match: false,
+      error: `Invalid declared total: ${declared.message}`,
+    };
   }
 
   const computedMinor = rows.reduce(

@@ -28,7 +28,8 @@ export type SpreadsheetErrorCode =
   | "empty_spreadsheet"
   | "no_data_rows"
   | "invalid_encoding"
-  | "file_too_large";
+  | "file_too_large"
+  | "csv_syntax";
 
 export type SpreadsheetError = {
   rowIndex: number;
@@ -97,12 +98,14 @@ export type SpreadsheetParseOptions = RowValidationOptions & {
   maxBytes?: number;
 };
 
-export type TotalsCheck = {
-  match: boolean;
-  computed: number;
-  declared: number;
-  delta: number;
-  computedMinor: number;
-  declaredMinor: number;
-  deltaMinor: number;
-};
+export type TotalsCheck =
+  | {
+      match: true | false;
+      computed: number;
+      declared: number;
+      delta: number;
+      computedMinor: number;
+      declaredMinor: number;
+      deltaMinor: number;
+    }
+  | { match: false; error: string };
