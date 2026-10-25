@@ -40,6 +40,12 @@ src/
     auth/config.ts          Login switch, public paths, and safe return paths
     auth/auth0.ts           Auth0 client, created on first use
     auth/session.ts         Signed-in user as a provider-neutral AuthUser
+    spreadsheet/
+      parser.ts             CSV import parser and result assembly
+      validator.ts          Row, date, amount, and completion validation
+      totals.ts             Decimal-safe total reconciliation
+      types.ts              Spreadsheet import contracts
+      index.ts              Public spreadsheet API
   styles/                   Base, shell, home, shared UI, pages, dialogs, breakpoints
   server/                   Server code; never import it from a client component
     http.ts                 Session check and JSON errors for route handlers
@@ -56,6 +62,7 @@ tests/
     timer-state.test.mjs
   server/                   Data, validation, and API; run with npm run test:server
     api-workspace-source.test.mjs
+    spreadsheet-parser.test.mjs
     storage-validation.test.mjs
     workspace-input.test.mjs
     workspace-source.test.mjs
@@ -135,6 +142,55 @@ setup and Next server startup out of the concurrent unit-test pass.
 4. Add tests for input and mapping. They run without a database.
 
 Keep credentials on the server and never put secrets in `NEXT_PUBLIC_*` variables. The database client, session, route helper, and services import `server-only`, so importing them from a client component fails the build. When collections become large, fetch and paginate them by screen rather than loading every record.
+
+### Spreadsheet imports
+
+Issue #37 provides the parser and validation pipeline in `src/lib/spreadsheet`. It is a pure module: upload/storage (#36), row pagination (#38), row details (#39), and version switching (#40) remain separate.
+
+```ts
+parseSpreadsheet(
+  input: string | Uint8Array | ArrayBuffer,
+  options: {
+    sheetName: string;
+    version: string;
+    importedAt?: Date | string;
+    declaredTotal?: string | number;
+    today?: Date | string;
+    maxFutureDays?: number;
+    maxBytes?: number;
+    columns?: Partial<SpreadsheetColumnMap>;
+  },
+): { meta, rows, errors }
+```
+
+The current input format is UTF-8 CSV with a header row. XLSX remains unsupported until the approved workbook schema (#16) and a parser dependency are agreed. The default headers are `row_id`, `invoice_date`, `customer`, `document_ref`, and `amount`; `columns` maps different workbook headers to those fields. `sheetName` and `version` are required metadata. The default file-size limit is 5 MB.
+
+Dates accept `YYYY-MM-DD` or `DD/MM/YYYY` and are normalized to ISO. Dates after `today` plus `maxFutureDays` (default `0`) are required errors. Amounts must be non-negative numbers with up to two decimal places and may use thousands separators. Customer and document reference values are required. Totals use integer paise internally.
+
+`meta` records the sheet name, version, import time, row counts, and computed totals. When `declaredTotal` is supplied it also records the declared total, delta, match flag, and minor-unit equivalents. `rows` contains every data row, including invalid rows. Invalid rows remain in the result with `_valid: false` and their `_errors`; they are never filtered out. Fully blank rows are counted and reported as warnings rather than data rows.
+
+| Error code                 | Severity | Meaning                                              |
+| -------------------------- | -------- | ---------------------------------------------------- |
+| `missing_required_column`  | required | A mapped header is absent                            |
+| `duplicate_column`         | required | The same normalized header appears more than once    |
+| `row_identifier_required`  | required | A row has no identifier                              |
+| `duplicate_row_identifier` | required | A row identifier repeats within the sheet            |
+| `invalid_date`             | required | Date is empty, malformed, or not a real calendar day |
+| `date_in_future`           | required | Date exceeds the configured future limit             |
+| `invalid_amount`           | required | Amount is empty or not numeric                       |
+| `negative_amount`          | required | Amount is below zero                                 |
+| `amount_too_large`         | required | Amount exceeds exact safe integer paise              |
+| `required_value_missing`   | required | Customer or document reference is empty              |
+| `invalid_declared_total`   | required | Supplied declared total is invalid                   |
+| `metadata_required`        | required | Sheet name or version is empty                       |
+| `empty_spreadsheet`        | required | No header row was found                              |
+| `no_data_rows`             | required | Header exists but there are no data rows             |
+| `invalid_encoding`         | required | Input is not valid UTF-8                             |
+| `file_too_large`           | required | Input exceeds `maxBytes`                             |
+| `total_mismatch`           | warning  | Declared total differs from the valid-row total      |
+| `blank_row`                | warning  | A fully blank row was skipped                        |
+
+Callers must use `canCompleteImport(errors)` before changing an import to complete. It returns `false` while any required error remains. Total mismatches are reported as warnings and do not block completion by themselves. Because no upload route exists yet, tenant ownership, authentication, and file-type checks remain the responsibility of the future route from #36.
 
 ## Login
 
