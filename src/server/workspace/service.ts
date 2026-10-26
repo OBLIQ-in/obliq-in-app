@@ -13,19 +13,15 @@ import {
   users,
 } from "../db/schema";
 import { clientTaken, projectTaken } from "@/lib/workspace-error";
+import { recordAudit } from "../audit";
+import {
+  ConflictError,
+  InputError,
+  uniqueViolation,
+  type Transaction,
+} from "../errors";
 import type { RecordInput } from "./input";
 import { toActivityItem, toISODate } from "./mappers";
-
-type Transaction = Parameters<
-  Parameters<ReturnType<typeof getDb>["transaction"]>[0]
->[0];
-
-// A request that is well formed but refers to something the firm doesn't have.
-export class InputError extends Error {}
-
-// A name already used in the firm. The message is shown in the form.
-export class ConflictError extends Error {}
-
 // Every query is scoped to the session's firm. Never take a firm ID from the
 // request body.
 export async function loadWorkspace(
@@ -162,8 +158,17 @@ async function insertRecord(session: FirmSession, input: RecordInput) {
       tx.insert(activity).values({ firmId, userId, action, subject });
     if (input.kind === "client") {
       const { title, contact, email } = input.values;
-      await tx.insert(clients).values({ firmId, name: title, contact, email });
+      const [client] = await tx
+        .insert(clients)
+        .values({ firmId, name: title, contact, email })
+        .returning({ id: clients.id });
       await log("added a client", title);
+      await recordAudit(tx, session, {
+        action: "client.created",
+        entityType: "client",
+        entityId: client.id,
+        details: { name: title },
+      });
       return;
     }
     const client = await findClient(tx, firmId, input.values.clientId);
@@ -248,21 +253,6 @@ async function clientName(values: { clientId: string }) {
     .from(clients)
     .where(eq(clients.id, values.clientId));
   return client?.name ?? "This client";
-}
-
-// Name of the unique index a Postgres error broke, if any. Drizzle wraps the
-// driver error in `cause`.
-function uniqueViolation(error: unknown): string | undefined {
-  for (let current = error; current instanceof Object;) {
-    const { code, constraint_name, cause } = current as {
-      code?: string;
-      constraint_name?: string;
-      cause?: unknown;
-    };
-    if (code === "23505") return constraint_name;
-    current = cause;
-  }
-  return undefined;
 }
 
 function initials(name: string) {
