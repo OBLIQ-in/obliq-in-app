@@ -22,6 +22,7 @@ import type { Navigate } from "./contracts";
 const icons: Record<Route, typeof Home> = {
   home: Home,
   clients: UsersRound,
+  engagements: BriefcaseBusiness,
   projects: BriefcaseBusiness,
   "time-tracking": Clock3,
   invoices: ReceiptText,

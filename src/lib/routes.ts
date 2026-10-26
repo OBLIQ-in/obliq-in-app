@@ -3,6 +3,7 @@
 export const pages = [
   { label: "Home", slug: "home", group: "features" },
   { label: "Clients", slug: "clients", group: "features" },
+  { label: "Engagements", slug: "engagements", group: "features" },
   { label: "Projects", slug: "projects", group: "features" },
   { label: "Time tracking", slug: "time-tracking", group: "features" },
   { label: "Invoices", slug: "invoices", group: "tools" },

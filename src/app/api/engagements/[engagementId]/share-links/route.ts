@@ -4,17 +4,14 @@ import { createShareLink, listShareLinks } from "@/server/share/service";
 
 export const dynamic = "force-dynamic";
 
-export const GET = route<{ engagementId: string }>(
-  (session, _request, params) => listShareLinks(session, params.engagementId),
+export const GET = route<{ engagementId: string }>((session, _req, params) =>
+  listShareLinks(session, params.engagementId),
 );
 
-// The response holds the token. It is shown once and never stored.
 export const POST = route<{ engagementId: string }>(
-  async (session, request, params) =>
-    createShareLink(
-      session,
-      params.engagementId,
-      shareLinkInput.parse(await request.json()).expiresInDays,
-    ),
+  async (session, request, params) => {
+    const { expiresInDays } = shareLinkInput.parse(await request.json());
+    return createShareLink(session, params.engagementId, expiresInDays);
+  },
   201,
 );
