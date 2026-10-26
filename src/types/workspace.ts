@@ -89,7 +89,8 @@ export type ModalKind =
 
 export type FormValues = {
   title: string;
-  client: string;
+  // Forms pick a client by ID; names are only for display.
+  clientId: string;
   amount: number;
   due: string;
   contact: string;
@@ -109,5 +110,5 @@ export type WorkspaceData = {
 export type WorkspaceSource = {
   load: () => Promise<WorkspaceData>;
   create: (kind: ModalKind, values: FormValues) => Promise<WorkspaceData>;
-  saveTime: (project: string, seconds: number) => Promise<WorkspaceData>;
+  saveTime: (projectId: string, seconds: number) => Promise<WorkspaceData>;
 };

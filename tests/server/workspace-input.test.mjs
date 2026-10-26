@@ -7,21 +7,42 @@ import {
   toISODate,
 } from "../../src/server/workspace/mappers.ts";
 
+const clientId = "7d3c0a52-8f1e-4b6a-9c2d-1e5f3a4b6c7d";
+
 test("keeps only the fields each record kind uses", () => {
   const parsed = recordInput.parse({
     kind: "contract",
-    values: { title: " Retainer ", client: "Example", amount: 0, due: "" },
+    values: { title: " Retainer ", clientId, client: "Example", due: "" },
   });
   assert.deepEqual(parsed, {
     kind: "contract",
-    values: { title: "Retainer", client: "Example" },
+    values: { title: "Retainer", clientId },
   });
+});
+
+test("links records by ID, not by name", () => {
+  const byName = recordInput.safeParse({
+    kind: "project",
+    values: { title: "Audit", client: "Example", due: "2026-10-10" },
+  });
+  assert.deepEqual(
+    byName.error.issues.map((issue) => issue.path.join(".")),
+    ["values.clientId"],
+  );
+  assert.equal(
+    timeInput.safeParse({ project: "Audit", seconds: 42 }).success,
+    false,
+  );
+  assert.equal(
+    timeInput.safeParse({ projectId: "Audit", seconds: 42 }).success,
+    false,
+  );
 });
 
 test("rejects invalid invoices and unknown kinds", () => {
   const invoice = recordInput.safeParse({
     kind: "invoice",
-    values: { title: "", client: "Example", amount: -1, due: "2026-13-01" },
+    values: { title: "", clientId, amount: -1, due: "2026-13-01" },
   });
   assert.deepEqual(
     invoice.error.issues.map((issue) => issue.path.join(".")),
@@ -35,15 +56,15 @@ test("rejects invalid invoices and unknown kinds", () => {
 
 test("accepts whole-second time sessions up to a day", () => {
   assert.equal(
-    timeInput.safeParse({ project: "Audit", seconds: 42 }).success,
+    timeInput.safeParse({ projectId: clientId, seconds: 42 }).success,
     true,
   );
   assert.equal(
-    timeInput.safeParse({ project: "Audit", seconds: 1.5 }).success,
+    timeInput.safeParse({ projectId: clientId, seconds: 1.5 }).success,
     false,
   );
   assert.equal(
-    timeInput.safeParse({ project: "Audit", seconds: 90_000 }).success,
+    timeInput.safeParse({ projectId: clientId, seconds: 90_000 }).success,
     false,
   );
 });

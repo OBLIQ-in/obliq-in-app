@@ -1,5 +1,5 @@
 {
-  "id": "dbcc9beb-d2b2-4d4d-b28d-5d0cf66e3bc5",
+  "id": "16c3b65d-ed99-4ffa-aca7-d6db9a1096b1",
   "prevId": "2052a492-fe3d-45ab-a3ee-5634569e291a",
   "version": "7",
   "dialect": "postgresql",
@@ -177,6 +177,27 @@
             }
           ],
           "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "clients_firm_name_idx": {
+          "name": "clients_firm_name_idx",
+          "columns": [
+            {
+              "expression": "firm_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "lower(\"name\")",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -362,18 +383,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "accepted_at": {
-          "name": "accepted_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "accepted_by": {
-          "name": "accepted_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -409,19 +418,6 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
-        },
-        "firm_invites_accepted_by_users_id_fk": {
-          "name": "firm_invites_accepted_by_users_id_fk",
-          "tableFrom": "firm_invites",
-          "tableTo": "users",
-          "columnsFrom": [
-            "accepted_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -435,12 +431,7 @@
         }
       },
       "policies": {},
-      "checkConstraints": {
-        "firm_invites_acceptance_pair": {
-          "name": "firm_invites_acceptance_pair",
-          "value": "(\"firm_invites\".\"accepted_at\" IS NULL) = (\"firm_invites\".\"accepted_by\" IS NULL)"
-        }
-      },
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.firm_members": {
@@ -779,6 +770,27 @@
             }
           ],
           "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "projects_client_name_idx": {
+          "name": "projects_client_name_idx",
+          "columns": [
+            {
+              "expression": "client_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "lower(\"name\")",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -1128,8 +1140,7 @@
       "schema": "public",
       "values": [
         "owner",
-        "article_assistant",
-        "reviewer"
+        "article_assistant"
       ]
     },
     "public.project_status": {
