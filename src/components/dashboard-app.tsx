@@ -28,6 +28,7 @@ import { BalancePage } from "@/components/dashboard/pages/balance";
 import { ClientsPage } from "@/components/dashboard/pages/clients";
 import { DocumentsPage } from "@/components/dashboard/pages/documents";
 import { InvoicesPage } from "@/components/dashboard/pages/invoices";
+import { EngagementsPage } from "@/components/dashboard/pages/engagements";
 import { ProjectsPage } from "@/components/dashboard/pages/projects";
 import { SettingsPage } from "@/components/dashboard/pages/settings";
 import { TaxesPage } from "@/components/dashboard/pages/taxes";
@@ -276,6 +277,7 @@ export default function DashboardApp({ children }: { children: ReactNode }) {
             selectProject={setSelectedProject}
           />
         )}
+        {ready && route === "engagements" && <EngagementsPage query={query} />}
         {ready && route === "projects" && (
           <ProjectsPage
             projects={projects}

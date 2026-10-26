@@ -49,6 +49,8 @@ src/
   styles/                   Base, shell, home, shared UI, pages, dialogs, breakpoints
   server/                   Server code; never import it from a client component
     http.ts                 Session check and JSON errors for route handlers
+    errors.ts               Errors that http.ts maps to 400, 403, 404 and 409
+    audit.ts                Writes an audit event in the caller's transaction
     auth/session.ts         Current user and firm (development stub until #10)
     db/client.ts            Lazy Postgres connection pool
     db/schema.ts            Tables and enums; source for drizzle/*.sql
@@ -56,12 +58,20 @@ src/
     workspace/input.ts      Request validation for each record kind
     workspace/mappers.ts    Database rows to frontend records
     workspace/service.ts    Firm-scoped queries and writes
+    engagements/rules.ts    Status lifecycle and who can see or change an engagement
+    engagements/input.ts    Engagement request validation
+    engagements/service.ts  Engagement queries and writes, with audit events
+    share/tokens.ts         Share tokens, hashing, client session cookie, client IP
+    share/rate-limit.ts     Postgres fixed-window rate limiter
+    share/service.ts        Client-share links (firm side) and client sessions
 drizzle/                    Generated SQL migrations; commit with schema changes
 tests/
   client/                   Browser-side state; run with npm run test:client
     timer-state.test.mjs
   server/                   Data, validation, and API; run with npm run test:server
     api-workspace-source.test.mjs
+    engagement-rules.test.mjs
+    share-tokens.test.mjs
     spreadsheet-parser.test.mjs
     storage-validation.test.mjs
     workspace-input.test.mjs
@@ -115,6 +125,47 @@ A request goes through three layers:
 Every other table has a `firm_id`, and the service takes it from the session, never from the request. Records link to clients and projects by ID. Statuses and document types are Postgres enums whose values match the strings the screens filter on. Activity stores a user ID and a timestamp; the label ("You", "2 hours ago") is worked out when it is read. Dates use India time.
 
 Forms send `clientId` and the timer sends `projectId` (#23). The service looks the ID up within the session's firm and returns 400 if it isn't found, so an ID from another firm looks the same as one that doesn't exist. Names are for display only. Client names are unique within a firm and project names within a client, both ignoring case; a duplicate returns 409 with a message the form shows.
+
+### Engagements
+
+An engagement is the audit work for one client and financial year (#30). Working papers, evidence and client-share links will belong to it.
+
+| Route                                          | Body                                                   | Service            |
+| ---------------------------------------------- | ------------------------------------------------------ | ------------------ |
+| `GET /api/engagements`                         |                                                        | `listEngagements`  |
+| `POST /api/engagements`                        | `{ clientId, title, financialYear, type, reviewerId }` | `createEngagement` |
+| `GET /api/engagements/{engagementId}`          |                                                        | `getEngagement`    |
+| `PATCH /api/engagements/{engagementId}/status` | `{ status }`                                           | `changeStatus`     |
+
+- **Fields.** `financialYear` is an Indian financial year such as `2025-26`. `type` is `Statutory audit`, `Tax audit`, `Internal audit` or `Other`. A client can't have two engagements with the same title in one year (409).
+- **Reviewer.** Every engagement has an assigned reviewer, who must be an `owner` or `reviewer` in the same firm.
+- **Workspace.** Creating an engagement also creates its private `internal` workspace in `engagement_workspaces`, in the same transaction. The client-share workspace (#33) will be a second row with kind `client_share`.
+- **Lifecycle.** Draft → Active or Archived; Active → Review or Archived; Review → Active (sent back) or Complete; Complete → Archived. Other moves return 409.
+- **Access.** Owners see and change every engagement in the firm. Reviewers see and change only the ones they review, and can only create engagements they review. Articles see none until assignment is added (#35). An engagement the user can't see returns 404, like one that doesn't exist. #29 will move these checks into one `can()`.
+- **Same firm, enforced by the database.** Composite foreign keys tie an engagement's `(firm_id, client_id)` to `clients` and `(firm_id, reviewer_id)` to `firm_members`, so a client or reviewer from another firm is rejected even if the code has a bug.
+
+### Client-share links
+
+A firm shares one engagement with its client through a link (#33). v1 uses a bearer link: the firm copies it and sends it themselves. An OTP step can be added once email delivery exists.
+
+| Route                                                     | Body                 | Who                      |
+| --------------------------------------------------------- | -------------------- | ------------------------ |
+| `GET /api/engagements/{engagementId}/share-links`         |                      | Owner, assigned reviewer |
+| `POST /api/engagements/{engagementId}/share-links`        | `{ expiresInDays? }` | Owner, assigned reviewer |
+| `DELETE /api/engagements/{engagementId}/share-links/{id}` |                      | Owner, assigned reviewer |
+| `POST /api/share/open`                                    | `{ token }`          | Anyone with the link     |
+| `GET /api/share/session`, `DELETE /api/share/session`     |                      | The client's session     |
+
+- **Tokens.** 256-bit random, base64url. Only the SHA-256 hash is stored, and the token appears once, in the create response, with the path `/share/{token}`. Links expire after 1–30 days (7 by default). Revoking is immediate and can be repeated safely.
+- **Opening.** `POST /api/share/open` swaps the link token for a client session: a second random token whose hash is in `share_sessions`, sent as the `obliq_share` cookie (HttpOnly, SameSite=Strict, Secure in production, `Path=/api/share`). A session lasts 12 hours and never outlives its link. Every request checks the session, its link and the engagement again, so revoking the link, its expiry, or moving the engagement to Complete or Archived ends access at once.
+- **Scope.** Every link opens the engagement's single `client_share` workspace. The client view (`ClientWorkspace`) is built by its own query and holds only the firm, client, engagement title and year. A client session is never a firm session: `getSession()` doesn't read the share cookie, so firm routes return 401.
+- **Failures look the same.** A wrong, expired or revoked token, or a closed engagement, all return 404 with one message. A real link used after it stopped working writes `share_link.denied`.
+- **Rate limit.** 20 open attempts per 15 minutes per client address, counted in `rate_limits`, so every server instance shares the count. Addresses are hashed before storage. Over the limit returns 429 with `Retry-After`.
+- **Audit.** `share_link.created`, `share_link.revoked`, `share_link.opened` and `share_link.denied`. Client events have no `actor_user_id`; `details` holds the hashed address.
+
+### Audit events
+
+`audit_events` records who did what, for the audit trail, in the format #49 describes: `action` (such as `engagement.created` or `engagement.status_changed`), `entity_type`, `entity_id`, the engagement, the actor and `details`. `recordAudit()` writes it in the same transaction as the change, so neither is saved without the other. A trigger rejects `UPDATE`, `DELETE` and `TRUNCATE`, so the history can't be changed. Because of that, a firm or engagement with audit events can't be deleted; archive it instead. `activity` stays the dashboard's feed.
 
 ### Sessions
 
