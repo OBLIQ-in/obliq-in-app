@@ -42,5 +42,7 @@
       "version": "7",
       "when": 1792851524146,
       "tag": "0005_firm_invitations",
+      "breakpoints": true
+    }
   ]
 }

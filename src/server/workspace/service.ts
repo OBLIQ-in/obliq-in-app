@@ -22,7 +22,6 @@ import {
 } from "../errors";
 import type { RecordInput } from "./input";
 import { toActivityItem, toISODate } from "./mappers";
-
 // Every query is scoped to the session's firm. Never take a firm ID from the
 // request body.
 export async function loadWorkspace(
