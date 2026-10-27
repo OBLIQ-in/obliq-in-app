@@ -120,7 +120,7 @@ The application's database user must have no permission to update or delete rows
 
 ## Who can see and change links
 
-Roles are those on issue #12: Owner, Reviewer / Senior, Article / Preparer, and Client Upload User.
+Roles are those on issue #29: Owner, Reviewer / Senior, Article / Preparer, and Client Upload User.
 
 | Role                                  | See rows and links                                                      | Link and unlink                                                                                |
 | ------------------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
