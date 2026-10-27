@@ -44,12 +44,14 @@ export function securityHeaders({ production, auth0Domain }: Options) {
       value: "camera=(), microphone=(), geolocation=()",
     },
     // Browsers remember HSTS, so only send it from the HTTPS deployments.
+    // Added 'preload' for HSTS and COOP header for better security.
     ...(production
       ? [
           {
             key: "Strict-Transport-Security",
-            value: "max-age=63072000; includeSubDomains",
+            value: "max-age=63072000; includeSubDomains; preload",
           },
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
         ]
       : []),
   ];
