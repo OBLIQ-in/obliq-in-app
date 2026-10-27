@@ -15,7 +15,8 @@ test(
     const { eq, inArray } = await import("drizzle-orm");
     const { getDb } = await import("../../src/server/db/client.ts");
     const schema = await import("../../src/server/db/schema.ts");
-    const { InputError, createRecord, loadWorkspace, saveTime } =
+    const { InputError } = await import("../../src/server/errors.ts");
+    const { createRecord, loadWorkspace, saveTime } =
       await import("../../src/server/workspace/service.ts");
 
     const db = getDb();
@@ -294,7 +295,7 @@ test(
               kind: "project",
               values: {
                 title: "Sneaky Project",
-                client: "Alpha Only Client",
+                clientId: sharedAId,
                 due: "2026-12-01",
               },
             }),
@@ -305,7 +306,7 @@ test(
               kind: "invoice",
               values: {
                 title: "Sneaky Invoice",
-                client: "Alpha Only Client",
+                clientId: sharedAId,
                 amount: 100,
                 due: "2026-12-01",
               },
@@ -317,13 +318,13 @@ test(
               kind: "contract",
               values: {
                 title: "Sneaky Contract",
-                client: "Alpha Only Client",
+                clientId: sharedAId,
               },
             }),
             "Unknown client",
           );
           await rejectsInput(
-            saveTime(sessionB, { project: "Alpha Project", seconds: 60 }),
+            saveTime(sessionB, { projectId: projectAId, seconds: 60 }),
             "Unknown project",
           );
 
@@ -359,7 +360,7 @@ test(
             kind: "project",
             values: {
               title: "Alpha New Project",
-              client: "Shared Name Client",
+              clientId: sharedAId,
               due: "2026-12-01",
             },
           });
