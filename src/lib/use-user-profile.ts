@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { defaultUserProfile } from "../data/dashboard.ts";
+import { defaultUserProfile } from "../data/default-user-profile.ts";
 import { validUserProfile } from "./storage-validation.ts";
 import type { UserProfile } from "@/types/workspace";
 

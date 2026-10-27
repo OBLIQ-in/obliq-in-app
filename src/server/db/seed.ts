@@ -1,12 +1,19 @@
-// Creates a development firm from the design fixtures for DEV_AUTH_ID.
+// Creates a synthetic demo firm for development or explicitly opted-in staging.
 // Run with `npm run db:seed`. Skips if the user already exists.
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { dashboard } from "../../data/dashboard.ts";
 import * as schema from "./schema.ts";
+import { assertSyntheticSeedAllowed } from "./seed-policy.ts";
 
 const { DATABASE_URL, DEV_AUTH_ID } = process.env;
+try {
+  assertSyntheticSeedAllowed(process.env);
+} catch (error) {
+  console.error(error instanceof Error ? error.message : error);
+  process.exit(1);
+}
 if (!DATABASE_URL || !DEV_AUTH_ID) {
   console.error("Set DATABASE_URL and DEV_AUTH_ID in .env first.");
   process.exit(1);
@@ -45,7 +52,11 @@ if (existing) {
     });
     const [firm] = await tx
       .insert(schema.firms)
-      .values({ name: "OBLIQ Demo Firm", createdBy: user.id })
+      .values({
+        name: "SYNTHETIC DEMO — OBLIQ",
+        isSynthetic: true,
+        createdBy: user.id,
+      })
       .returning();
     const firmId = firm.id;
     await tx
@@ -102,7 +113,7 @@ if (existing) {
       })),
     );
   });
-  console.log(`Seeded a demo firm for ${DEV_AUTH_ID}.`);
+  console.log(`Seeded a synthetic demo firm for ${DEV_AUTH_ID}.`);
 }
 
 await connection.end();

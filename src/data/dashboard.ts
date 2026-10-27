@@ -3,16 +3,14 @@ import type {
   Client,
   Document,
   Invoice,
-  Metric,
   Project,
   TeamMember,
-  UserProfile,
 } from "@/types/workspace";
+import { defaultUserProfile } from "./default-user-profile.ts";
 
 type DashboardData = {
   user: { firstName: string };
   team: TeamMember[];
-  metrics: Metric[];
   earnings: { label: string; billable: number; nonBillable: number }[];
   yearlyEarnings: { label: string; billable: number; nonBillable: number }[];
   projects: Project[];
@@ -20,19 +18,6 @@ type DashboardData = {
   invoices: Invoice[];
   documents: Document[];
   activity: ActivityItem[];
-};
-
-// Default profile fixtures for local preview
-export const defaultUserProfile: UserProfile = {
-  id: "USR-01",
-  name: "CA Partner",
-  firstName: "Partner",
-  role: "Owner",
-  firmName: "OBLIQ Workspace",
-  email: "",
-  membershipNo: "",
-  phone: "",
-  isCustomized: false,
 };
 
 // Static fixtures for the local preview.
@@ -47,28 +32,6 @@ export const dashboard = {
     },
     { id: "TM-02", name: "Riyashika Das", role: "Reviewer / Senior" },
     { id: "TM-03", name: "Sukrut Pawar", role: "Article / Preparer" },
-  ],
-  metrics: [
-    {
-      id: "total",
-      label: "Total projects",
-      icon: "briefcase",
-    },
-    {
-      id: "active",
-      label: "Active projects",
-      icon: "edit",
-    },
-    {
-      id: "completed",
-      label: "Completed projects",
-      icon: "calendar",
-    },
-    {
-      id: "hours",
-      label: "Total hours worked",
-      icon: "clock",
-    },
   ],
   earnings: [
     { label: "Jan", billable: 37, nonBillable: 1 },

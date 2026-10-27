@@ -11,11 +11,22 @@ import {
   ReceiptText,
   Send,
 } from "lucide-react";
-import { dashboard } from "@/data/dashboard";
 import { initials } from "@/lib/format";
 import { formatRelativeTime } from "@/lib/format";
 import type { Route } from "@/lib/routes";
-import type { ActivityItem, ModalKind, TeamMember } from "@/types/workspace";
+import type {
+  ActivityItem,
+  Metric,
+  ModalKind,
+  TeamMember,
+} from "@/types/workspace";
+
+export const homeMetrics: Metric[] = [
+  { id: "total", label: "Total projects", icon: "briefcase" },
+  { id: "active", label: "Active projects", icon: "edit" },
+  { id: "completed", label: "Completed projects", icon: "calendar" },
+  { id: "hours", label: "Total hours worked", icon: "clock" },
+];
 
 // A quick action either opens a form or goes to a page, never neither.
 export type QuickAction = {
@@ -68,7 +79,7 @@ export function MetricCard({
   metric,
   value,
 }: {
-  metric: (typeof dashboard.metrics)[number];
+  metric: Metric;
   value: string;
 }) {
   const Icon = metricIcons[metric.icon];

@@ -46,8 +46,17 @@ export default function DashboardApp({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const workspace = useWorkspace();
-  const { projects, clients, invoices, documents, activity, entries } =
-    workspace;
+  const {
+    projects,
+    clients,
+    invoices,
+    documents,
+    activity,
+    team,
+    entries,
+    monthlyTrackedHours,
+    yearlyTrackedHours,
+  } = workspace;
   const ready = !workspace.loading && !workspace.error;
   const timer = useTimer();
   const { running, seconds } = timer;
@@ -263,12 +272,20 @@ export default function DashboardApp({ children }: { children: ReactNode }) {
             </button>
           </div>
         )}
+        {ready && workspace.syntheticData && (
+          <p className="synthetic-data-banner" role="status">
+            Synthetic demo data — not real firm records.
+          </p>
+        )}
         {ready && route === "home" && (
           <HomePage
             projects={projects}
             invoices={invoices}
             activity={activity}
+            team={team}
             entries={entries}
+            monthlyTrackedHours={monthlyTrackedHours}
+            yearlyTrackedHours={yearlyTrackedHours}
             period={period}
             setPeriod={setPeriod}
             openModal={setModal}
@@ -320,6 +337,8 @@ export default function DashboardApp({ children }: { children: ReactNode }) {
         {ready && route === "accounting" && (
           <AccountingPage
             invoices={invoices}
+            monthlyTrackedHours={monthlyTrackedHours}
+            yearlyTrackedHours={yearlyTrackedHours}
             period={period}
             setPeriod={setPeriod}
           />

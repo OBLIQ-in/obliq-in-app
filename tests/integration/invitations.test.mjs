@@ -48,9 +48,9 @@ async function firmOwner() {
   const actor = await user("firm");
   const firmId = randomUUID();
   testFirms.push(firmId);
-  await db
-    .insert(schema.firms)
-    .values({ id: firmId, name: "Synthetic Firm", createdBy: actor.userId });
+  // Create legacy rows before applying the migration under test. The current
+  // Drizzle schema includes is_synthetic, which does not exist in 0000_init.
+  await connection`INSERT INTO firms (id, name, created_by) VALUES (${firmId}, 'Synthetic Firm', ${actor.userId})`;
   await db
     .insert(schema.firmMembers)
     .values({ firmId, userId: actor.userId, role: "owner" });

@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import type { WorkspaceData } from "@/types/workspace";
 import type { FirmSession } from "../auth/session";
 import { getDb } from "../db/client";
@@ -7,6 +7,8 @@ import {
   activity,
   clients,
   documents,
+  firms,
+  firmMembers,
   invoices,
   projects,
   timeEntries,
@@ -22,6 +24,7 @@ import {
 } from "../errors";
 import type { RecordInput } from "./input";
 import { toActivityItem, toISODate } from "./mappers";
+import { buildTrackedHours } from "@/lib/tracked-hours";
 // Every query is scoped to the session's firm. Never take a firm ID from the
 // request body.
 export async function loadWorkspace(
@@ -36,7 +39,9 @@ export async function loadWorkspace(
     invoiceRows,
     documentRows,
     activityRows,
+    teamRows,
     entryRows,
+    firmRows,
   ] = await Promise.all([
     db
       .select({
@@ -108,6 +113,16 @@ export async function loadWorkspace(
       .limit(50),
     db
       .select({
+        id: users.id,
+        name: users.name,
+        role: firmMembers.role,
+      })
+      .from(firmMembers)
+      .innerJoin(users, eq(users.id, firmMembers.userId))
+      .where(eq(firmMembers.firmId, firmId))
+      .orderBy(asc(firmMembers.joinedAt)),
+    db
+      .select({
         id: timeEntries.id,
         date: timeEntries.date,
         project: projects.name,
@@ -117,7 +132,14 @@ export async function loadWorkspace(
       .innerJoin(projects, eq(projects.id, timeEntries.projectId))
       .where(eq(timeEntries.firmId, firmId))
       .orderBy(desc(timeEntries.createdAt)),
+    db
+      .select({ syntheticData: firms.isSynthetic })
+      .from(firms)
+      .where(eq(firms.id, firmId))
+      .limit(1),
   ]);
+  const firm = firmRows[0];
+  if (!firm) throw new Error("Firm not found for workspace session");
   return {
     clients: clientRows,
     projects: projectRows,
@@ -131,7 +153,17 @@ export async function loadWorkspace(
     activity: activityRows.map((row) =>
       toActivityItem(row, session.userId, now),
     ),
+    team: teamRows.map((row) => ({
+      ...row,
+      role: {
+        owner: "Owner",
+        reviewer: "Reviewer / Senior",
+        article_assistant: "Article / Preparer",
+      }[row.role],
+    })),
     entries: entryRows,
+    ...buildTrackedHours(entryRows, now),
+    syntheticData: firm.syntheticData,
   };
 }
 

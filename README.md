@@ -36,7 +36,11 @@ npm run db:migrate        # apply drizzle/*.sql
 npm run db:seed           # demo firm for DEV_AUTH_ID, from the design fixtures
 ```
 
-Set `NEXT_PUBLIC_WORKSPACE_SOURCE=api` in `.env` and restart `npm run dev` to load the screens from the database. Without it the app uses browser storage as before, so it runs without a database.
+Set `NEXT_PUBLIC_WORKSPACE_SOURCE=api` in `.env` and restart `npm run dev` to load the screens from the database. Without it, development uses browser storage and design fixtures so the app can run without a database. Production always uses the API path; it never falls back to browser fixtures.
+
+For deployed environments, set `APP_ENV` and `NEXT_PUBLIC_APP_ENV` to the same value (`staging` or `production`) and set `NEXT_PUBLIC_WORKSPACE_SOURCE=api`. The app refuses browser fixture mode in staging/production and rejects unknown environment/source values. Production must never use the synthetic seed.
+
+For a staging database only, use a dedicated, empty database whose name ends in `_staging` and a staging-only `DEV_AUTH_ID`. Set `APP_ENV=staging`, `NEXT_PUBLIC_APP_ENV=staging`, `NEXT_PUBLIC_WORKSPACE_SOURCE=api`, and `SEED_SYNTHETIC_DATA=true`, then run `npm run db:migrate` and `npm run db:seed`. The seed is explicitly synthetic, writes a `SYNTHETIC DEMO` firm name, and marks the firm so the dashboard displays a persistent synthetic-data warning. The seed rejects production configuration and staging database names without the `_staging` suffix. Never point this seed at a production database. Staging API access still follows the repository's configured authentication/session setup.
 
 | Route                    | Method | Purpose                                     |
 | ------------------------ | ------ | ------------------------------------------- |
@@ -51,7 +55,7 @@ After changing `src/server/db/schema.ts`, run `npm run db:generate` and commit t
 
 ## Data
 
-Headline metrics and earnings use design fixtures. The timer remembers its project and start time across refreshes and closed tabs when browser storage is available. New projects do not change the selected project. A first session requires an explicit project selection.
+Development preview mode uses synthetic design fixtures from `src/data/dashboard.ts`; these are not production customer records. Staging and production use the API and firm-scoped database records. Staging demo firms are explicitly seeded as synthetic and visibly marked in the dashboard; production seeding is refused. Project metrics, invoices, team members, and activity in API mode come from that firm's records. A new firm with no records shows empty lists and zero totals. The chart measures tracked time-entry hours, not revenue; its values are calculated from the firm's saved time entries, and its CSV export uses the same unit. The timer remembers its project and start time across refreshes and closed tabs when browser storage is available. New projects do not change the selected project. A first session requires an explicit project selection.
 
 `WorkspaceSource` defines async `load`, `create`, and `saveTime` methods. `src/lib/workspace-source.ts` exports the browser or API implementation; the screens access it through `useWorkspace`. Forms await successful saves, prevent repeat submissions while saving, and keep input when a request fails. Loading failures have a Retry action; failed time saves retain the duration for retry. Email delivery is not implemented.
 

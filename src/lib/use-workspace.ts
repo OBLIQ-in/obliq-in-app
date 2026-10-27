@@ -15,7 +15,11 @@ const emptyWorkspace: WorkspaceData = {
   invoices: [],
   documents: [],
   activity: [],
+  team: [],
   entries: [],
+  monthlyTrackedHours: [],
+  yearlyTrackedHours: [],
+  syntheticData: false,
 };
 
 export function useWorkspace(source: WorkspaceSource = workspaceSource) {

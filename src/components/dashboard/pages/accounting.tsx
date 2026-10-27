@@ -2,14 +2,18 @@ import type { Dispatch, SetStateAction } from "react";
 import { EarningsChart } from "@/components/dashboard/earnings-chart";
 import { PageHeading } from "@/components/dashboard/ui";
 import { formatMoney } from "@/lib/format";
-import type { Invoice } from "@/types/workspace";
+import type { Invoice, TrackedHoursPoint } from "@/types/workspace";
 
 export function AccountingPage({
   invoices,
+  monthlyTrackedHours,
+  yearlyTrackedHours,
   period,
   setPeriod,
 }: {
   invoices: Invoice[];
+  monthlyTrackedHours: TrackedHoursPoint[];
+  yearlyTrackedHours: TrackedHoursPoint[];
   period: string;
   setPeriod: Dispatch<SetStateAction<string>>;
 }) {
@@ -45,7 +49,12 @@ export function AccountingPage({
         </div>
       </div>
       <div className="accounting-chart">
-        <EarningsChart period={period} setPeriod={setPeriod} />
+        <EarningsChart
+          period={period}
+          setPeriod={setPeriod}
+          monthlyHours={monthlyTrackedHours}
+          yearlyHours={yearlyTrackedHours}
+        />
       </div>
     </>
   );

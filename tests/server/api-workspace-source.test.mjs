@@ -9,7 +9,11 @@ const workspace = {
   invoices: [],
   documents: [],
   activity: [],
+  team: [],
   entries: [],
+  monthlyTrackedHours: [],
+  yearlyTrackedHours: [],
+  syntheticData: false,
 };
 
 function recorder(status = 200) {
@@ -24,6 +28,7 @@ function recorder(status = 200) {
 test("loads the workspace without caching", async () => {
   const { calls, source } = recorder();
   assert.deepEqual(await source.load(), workspace);
+  assert.equal((await source.load()).syntheticData, false);
   assert.equal(calls[0].url, "/api/workspace");
   assert.equal(calls[0].init.cache, "no-store");
 });

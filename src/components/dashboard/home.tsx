@@ -1,8 +1,8 @@
 import type { Dispatch, SetStateAction } from "react";
 import { ArrowRight, ReceiptText } from "lucide-react";
-import { dashboard } from "@/data/dashboard";
 import {
   ActivityList,
+  homeMetrics,
   MetricCard,
   TeamList,
   quickActions,
@@ -18,16 +18,21 @@ import type {
 } from "@/components/dashboard/contracts";
 import type {
   ActivityItem,
+  TeamMember,
   Invoice,
   Project,
   TimeEntry,
+  TrackedHoursPoint,
 } from "@/types/workspace";
 
 export function HomePage({
   projects,
   invoices,
   activity,
+  team,
   entries,
+  monthlyTrackedHours,
+  yearlyTrackedHours,
   period,
   setPeriod,
   openModal,
@@ -37,7 +42,10 @@ export function HomePage({
   projects: Project[];
   invoices: Invoice[];
   activity: ActivityItem[];
+  team: TeamMember[];
   entries: TimeEntry[];
+  monthlyTrackedHours: TrackedHoursPoint[];
+  yearlyTrackedHours: TrackedHoursPoint[];
   period: string;
   setPeriod: Dispatch<SetStateAction<string>>;
   openModal: OpenModal;
@@ -51,7 +59,7 @@ export function HomePage({
   return (
     <div className="dashboard-content">
       <section className="metrics" aria-label="Project summary">
-        {dashboard.metrics.map((metric) => (
+        {homeMetrics.map((metric) => (
           <MetricCard
             key={metric.id}
             metric={metric}
@@ -61,7 +69,12 @@ export function HomePage({
       </section>
       <div className="lower-grid">
         <div className="home-main">
-          <EarningsChart period={period} setPeriod={setPeriod} />
+          <EarningsChart
+            period={period}
+            setPeriod={setPeriod}
+            monthlyHours={monthlyTrackedHours}
+            yearlyHours={yearlyTrackedHours}
+          />
           <section className="panel ongoing-panel">
             <SectionHeader
               title="Open projects"
@@ -93,7 +106,11 @@ export function HomePage({
           </section>
           <section className="panel team-panel">
             <SectionHeader title="My team" />
-            <TeamList members={dashboard.team} />
+            {team.length > 0 ? (
+              <TeamList members={team} />
+            ) : (
+              <p>Team information is not available yet.</p>
+            )}
           </section>
         </div>
       </div>

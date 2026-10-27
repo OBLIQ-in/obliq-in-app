@@ -7,6 +7,17 @@ export async function resolve(specifier, context, nextResolve) {
   if (specifier === "server-only") {
     return { shortCircuit: true, url: emptyModule };
   }
+  if (specifier.startsWith("@/")) {
+    for (const suffix of [".ts", "/index.ts"]) {
+      const url = new URL(
+        `../../../src/${specifier.slice(2)}${suffix}`,
+        import.meta.url,
+      ).href;
+      if (existsSync(fileURLToPath(url))) {
+        return { shortCircuit: true, url };
+      }
+    }
+  }
   try {
     return await nextResolve(specifier, context);
   } catch (error) {

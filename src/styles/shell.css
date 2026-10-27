@@ -60,6 +60,16 @@
   min-height: 100dvh;
   padding: 28px clamp(20px, 2.5vw, 40px) 36px;
 }
+.synthetic-data-banner {
+  margin: 16px 0 0;
+  padding: 10px 14px;
+  border: 1px solid #e7c76e;
+  border-radius: 8px;
+  background: #fff7d6;
+  color: #624b00;
+  font-size: 12px;
+  font-weight: 700;
+}
 .topbar {
   display: flex;
   align-items: center;
