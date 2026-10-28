@@ -95,7 +95,11 @@ export const users = pgTable(
     createdAt: createdAt(),
   },
   // One account per email, however it is capitalised.
-  (table) => [uniqueIndex("users_email_idx").on(sql`lower(${table.email})`)],
+  (table) => [
+    uniqueIndex("users_email_idx").on(sql`lower(${table.email})`),
+    index("users_type_idx").on(table.type),
+    index("users_onboarded_idx").on(table.onboardedAt),
+  ],
 );
 
 // How a user signs in, kept apart from `users` so the login provider can
@@ -117,14 +121,21 @@ export const userIdentities = pgTable(
   ],
 );
 
-export const firms = pgTable("firms", {
-  id: id(),
-  name: text("name").notNull(),
-  createdBy: uuid("created_by")
-    .notNull()
-    .references(() => users.id),
-  createdAt: createdAt(),
-});
+export const firms = pgTable(
+  "firms",
+  {
+    id: id(),
+    name: text("name").notNull(),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    index("firms_created_by_idx").on(table.createdBy),
+    index("firms_created_at_idx").on(table.createdAt),
+  ],
+);
 
 export const firmMembers = pgTable(
   "firm_members",
@@ -142,6 +153,8 @@ export const firmMembers = pgTable(
     primaryKey({ columns: [table.firmId, table.userId] }),
     // getSession() looks members up by user on every request.
     index("firm_members_user_idx").on(table.userId),
+    index("firm_members_user_joined_idx").on(table.userId, table.joinedAt),
+    index("firm_members_firm_role_idx").on(table.firmId, table.role),
   ],
 );
 
@@ -167,6 +180,12 @@ export const firmInvites = pgTable(
       "firm_invites_acceptance_pair",
       sql`(${table.acceptedAt} IS NULL) = (${table.acceptedBy} IS NULL)`,
     ),
+    index("firm_invites_code_idx").on(table.code),
+    index("firm_invites_firm_status_idx").on(
+      table.firmId,
+      table.acceptedAt,
+      table.revokedAt,
+    ),
   ],
 );
 
@@ -183,6 +202,7 @@ export const clients = pgTable(
   },
   (table) => [
     index("clients_firm_idx").on(table.firmId),
+    index("clients_status_idx").on(table.status),
     // Client names are how people tell clients apart in lists and forms.
     uniqueIndex("clients_firm_name_idx").on(
       table.firmId,
@@ -211,6 +231,9 @@ export const projects = pgTable(
   },
   (table) => [
     index("projects_firm_idx").on(table.firmId),
+    index("projects_status_idx").on(table.status),
+    index("projects_due_idx").on(table.due),
+    index("projects_lead_idx").on(table.lead),
     // Two clients may each have an "Annual audit"; one client may not.
     uniqueIndex("projects_client_name_idx").on(
       table.clientId,
@@ -235,7 +258,11 @@ export const invoices = pgTable(
     status: invoiceStatus("status").notNull().default("Draft"),
     createdAt: createdAt(),
   },
-  (table) => [index("invoices_firm_idx").on(table.firmId)],
+  (table) => [
+    index("invoices_firm_idx").on(table.firmId),
+    index("invoices_status_idx").on(table.status),
+    index("invoices_due_idx").on(table.due),
+  ],
 );
 
 export const documents = pgTable(
@@ -254,7 +281,11 @@ export const documents = pgTable(
       .defaultNow(),
     createdAt: createdAt(),
   },
-  (table) => [index("documents_firm_idx").on(table.firmId)],
+  (table) => [
+    index("documents_firm_idx").on(table.firmId),
+    index("documents_status_idx").on(table.status),
+    index("documents_updated_idx").on(table.updatedAt),
+  ],
 );
 
 export const timeEntries = pgTable(
@@ -272,7 +303,12 @@ export const timeEntries = pgTable(
     seconds: integer("seconds").notNull(),
     createdAt: createdAt(),
   },
-  (table) => [index("time_entries_firm_idx").on(table.firmId)],
+  (table) => [
+    index("time_entries_firm_idx").on(table.firmId),
+    index("time_entries_user_date_idx").on(table.userId, table.date),
+    index("time_entries_project_date_idx").on(table.projectId, table.date),
+    index("time_entries_user_project_idx").on(table.userId, table.projectId),
+  ],
 );
 
 export const activity = pgTable(
@@ -288,7 +324,11 @@ export const activity = pgTable(
     type: activityType("type").notNull().default("new"),
     createdAt: createdAt(),
   },
-  (table) => [index("activity_firm_idx").on(table.firmId, table.createdAt)],
+  (table) => [
+    index("activity_firm_idx").on(table.firmId, table.createdAt),
+    index("activity_user_idx").on(table.userId, table.createdAt),
+    index("activity_type_idx").on(table.type),
+  ],
 );
 
 // An audit engagement for one client and financial year (#30). Working papers,
@@ -316,6 +356,15 @@ export const engagements = pgTable(
   (table) => [
     index("engagements_firm_idx").on(table.firmId),
     index("engagements_reviewer_idx").on(table.reviewerId),
+    index("engagements_client_idx").on(table.clientId),
+    index("engagements_client_year_idx").on(
+      table.clientId,
+      table.financialYear,
+    ),
+    index("engagements_status_idx").on(table.status),
+    index("engagements_reviewer_active_idx")
+      .on(table.reviewerId)
+      .where(sql`${table.status} != 'Archived'`),
     uniqueIndex("engagements_client_year_title_idx").on(
       table.clientId,
       table.financialYear,
@@ -347,6 +396,8 @@ export const engagementWorkspaces = pgTable(
     createdAt: createdAt(),
   },
   (table) => [
+    index("engagement_workspaces_engagement_idx").on(table.engagementId),
+    index("engagement_workspaces_firm_idx").on(table.firmId),
     foreignKey({
       name: "engagement_workspaces_engagement_fk",
       columns: [table.firmId, table.engagementId],
@@ -383,6 +434,8 @@ export const auditEvents = pgTable(
   },
   (table) => [
     index("audit_events_firm_idx").on(table.firmId, table.createdAt),
+    index("audit_events_actor_idx").on(table.actorUserId, table.createdAt),
+    index("audit_events_entity_idx").on(table.entityType, table.entityId),
     index("audit_events_engagement_idx").on(
       table.engagementId,
       table.createdAt,

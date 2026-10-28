@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import type { WorkspaceData } from "@/types/workspace";
 import type { FirmSession } from "../auth/session";
 import { getDb } from "../db/client";
@@ -22,6 +22,7 @@ import {
 } from "../errors";
 import type { RecordInput } from "./input";
 import { toActivityItem, toISODate } from "./mappers";
+
 // Every query is scoped to the session's firm. Never take a firm ID from the
 // request body.
 export async function loadWorkspace(
@@ -30,13 +31,15 @@ export async function loadWorkspace(
 ): Promise<WorkspaceData> {
   const db = getDb();
   const { firmId } = session;
+
   const [
-    clientRows,
+    rawClientRows,
     projectRows,
     invoiceRows,
     documentRows,
     activityRows,
     entryRows,
+    clientProjectCounts,
   ] = await Promise.all([
     db
       .select({
@@ -45,7 +48,6 @@ export async function loadWorkspace(
         contact: clients.contact,
         email: clients.email,
         status: clients.status,
-        projects: db.$count(projects, eq(projects.clientId, clients.id)),
       })
       .from(clients)
       .where(eq(clients.firmId, firmId))
@@ -117,7 +119,26 @@ export async function loadWorkspace(
       .innerJoin(projects, eq(projects.id, timeEntries.projectId))
       .where(eq(timeEntries.firmId, firmId))
       .orderBy(desc(timeEntries.createdAt)),
+    // Pre-aggregate project counts to avoid N+1 queries — one GROUP BY
+    // instead of one correlated subquery per client row.
+    db
+      .select({
+        clientId: projects.clientId,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(projects)
+      .where(eq(projects.firmId, firmId))
+      .groupBy(projects.clientId),
   ]);
+
+  const projectCountMap = new Map(
+    clientProjectCounts.map((row) => [row.clientId, row.count]),
+  );
+  const clientRows = rawClientRows.map((row) => ({
+    ...row,
+    projects: projectCountMap.get(row.id) ?? 0,
+  }));
+
   return {
     clients: clientRows,
     projects: projectRows,

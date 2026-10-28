@@ -11,12 +11,13 @@ function positiveInteger(value: string | undefined, fallback: number) {
 }
 
 function connect(url: string) {
-  // `prepare: false` keeps queries working behind transaction poolers
-  // such as Neon's or Supabase's pooled connection strings.
-  const max = positiveInteger(process.env.DB_POOL_MAX, 1);
+  // `prepare: true` enables prepared statements for better performance
+  // Set to `false` when using connection poolers like Neon's pooled connection string
+  const max = positiveInteger(process.env.DB_POOL_MAX, 5);
+  const usePrepare = process.env.DB_USE_PREPARED !== "false"; // Default to true
   return drizzle(
     postgres(url, {
-      prepare: false,
+      prepare: usePrepare,
       max,
       connect_timeout: 10,
       idle_timeout: 20,
