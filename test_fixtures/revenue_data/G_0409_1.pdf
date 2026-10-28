@@ -1,0 +1,29 @@
+INVOICE DETAILS
+================
+
+Invoice Number: INV-0001
+Date: 2026-04-09
+Customer Name: ABC Enterprises Pvt Ltd
+PAN: ABCDE1234F
+GSTIN: 29ABCDE1234F1Z5
+Amount: ₹15,000.00
+Account Number: ACC00112233
+Address: 123, Brigade Road, Bangalore, Karnataka 560001
+
+DESCRIPTION OF GOODS/SERVICES:
+- Software Development Services: ₹10,000.00
+- Consulting Services: ₹5,000.00
+
+TAX DETAILS:
+- CGST (9%): ₹1,350.00
+- SGST (9%): ₹1,350.00
+- Total Tax: ₹2,700.00
+
+TOTAL AMOUNT: ₹17,700.00
+
+TERMS & CONDITIONS:
+1. Payment due within 30 days of invoice date
+2. Late payment attracts interest at 1.5% per month
+3. This is a computer generated invoice and does not require signature
+
+NOTE: This is a synthetic test fixture. All data is fictitious and anonymized for testing purposes.
