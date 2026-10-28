@@ -14,7 +14,7 @@ function connect(url: string) {
   // `prepare: true` enables prepared statements for better performance
   // Set to `false` when using connection poolers like Neon's pooled connection string
   const max = positiveInteger(process.env.DB_POOL_MAX, 5);
-  const usePrepare = process.env.DB_USE_PREPARED !== 'false'; // Default to true
+  const usePrepare = process.env.DB_USE_PREPARED !== "false"; // Default to true
   return drizzle(
     postgres(url, {
       prepare: usePrepare,

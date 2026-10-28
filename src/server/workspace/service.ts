@@ -31,27 +31,15 @@ export async function loadWorkspace(
 ): Promise<WorkspaceData> {
   const db = getDb();
   const { firmId } = session;
-  
-  // Pre-aggregate project counts to avoid N+1 queries
-  const clientProjectCounts = await db
-    .select({
-      clientId: projects.clientId,
-      count: sql`count(*)::int`,
-    })
-    .from(projects)
-    .where(eq(projects.firmId, firmId))
-    .groupBy(projects.clientId);
-  const projectCountMap = new Map(
-    clientProjectCounts.map((row) => [row.clientId, row.count]),
-  );
-  
+
   const [
-    clientRows,
+    rawClientRows,
     projectRows,
     invoiceRows,
     documentRows,
     activityRows,
     entryRows,
+    clientProjectCounts,
   ] = await Promise.all([
     db
       .select({
@@ -60,7 +48,6 @@ export async function loadWorkspace(
         contact: clients.contact,
         email: clients.email,
         status: clients.status,
-        projects: projectCountMap.get(clients.id) ?? 0,
       })
       .from(clients)
       .where(eq(clients.firmId, firmId))
@@ -132,8 +119,26 @@ export async function loadWorkspace(
       .innerJoin(projects, eq(projects.id, timeEntries.projectId))
       .where(eq(timeEntries.firmId, firmId))
       .orderBy(desc(timeEntries.createdAt)),
+    // Pre-aggregate project counts to avoid N+1 queries — one GROUP BY
+    // instead of one correlated subquery per client row.
+    db
+      .select({
+        clientId: projects.clientId,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(projects)
+      .where(eq(projects.firmId, firmId))
+      .groupBy(projects.clientId),
   ]);
-  
+
+  const projectCountMap = new Map(
+    clientProjectCounts.map((row) => [row.clientId, row.count]),
+  );
+  const clientRows = rawClientRows.map((row) => ({
+    ...row,
+    projects: projectCountMap.get(row.id) ?? 0,
+  }));
+
   return {
     clients: clientRows,
     projects: projectRows,

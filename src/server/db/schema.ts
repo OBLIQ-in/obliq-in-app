@@ -357,7 +357,10 @@ export const engagements = pgTable(
     index("engagements_firm_idx").on(table.firmId),
     index("engagements_reviewer_idx").on(table.reviewerId),
     index("engagements_client_idx").on(table.clientId),
-    index("engagements_client_year_idx").on(table.clientId, table.financialYear),
+    index("engagements_client_year_idx").on(
+      table.clientId,
+      table.financialYear,
+    ),
     index("engagements_status_idx").on(table.status),
     index("engagements_reviewer_active_idx")
       .on(table.reviewerId)
@@ -437,9 +440,6 @@ export const auditEvents = pgTable(
       table.engagementId,
       table.createdAt,
     ),
-    index("audit_events_recent_idx")
-      .on(table.firmId, table.createdAt)
-      .where(sql`${table.createdAt} > NOW() - INTERVAL '3 months'`),
     foreignKey({
       name: "audit_events_engagement_fk",
       columns: [table.firmId, table.engagementId],

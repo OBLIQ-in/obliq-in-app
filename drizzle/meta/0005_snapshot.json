@@ -1,5 +1,5 @@
 {
-  "id": "2bf46f58-ea64-41fd-b782-5768e530d297",
+  "id": "6ea6d253-0d09-452a-b2e3-07bba9f0149d",
   "prevId": "dbcc9beb-d2b2-4d4d-b28d-5d0cf66e3bc5",
   "version": "7",
   "dialect": "postgresql",
@@ -290,28 +290,6 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "audit_events_recent_idx": {
-          "name": "audit_events_recent_idx",
-          "columns": [
-            {
-              "expression": "firm_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"audit_events\".\"created_at\" > NOW() - INTERVAL '3 months'",
           "concurrently": false,
           "method": "btree",
           "with": {}

@@ -40,22 +40,8 @@
     {
       "idx": 5,
       "version": "7",
-      "when": 1793132634175,
+      "when": 1793190548144,
       "tag": "0005_database_optimizations",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1793133000000,
-      "tag": "0007_index_only_scans",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1793174111342,
-      "tag": "0007_colossal_multiple_man",
       "breakpoints": true
     }
   ]

@@ -2,7 +2,6 @@ CREATE INDEX "activity_user_idx" ON "activity" USING btree ("user_id","created_a
 CREATE INDEX "activity_type_idx" ON "activity" USING btree ("type");--> statement-breakpoint
 CREATE INDEX "audit_events_actor_idx" ON "audit_events" USING btree ("actor_user_id","created_at");--> statement-breakpoint
 CREATE INDEX "audit_events_entity_idx" ON "audit_events" USING btree ("entity_type","entity_id");--> statement-breakpoint
-CREATE INDEX "audit_events_recent_idx" ON "audit_events" USING btree ("firm_id","created_at") WHERE "audit_events"."created_at" > NOW() - INTERVAL '3 months';--> statement-breakpoint
 CREATE INDEX "clients_status_idx" ON "clients" USING btree ("status");--> statement-breakpoint
 CREATE INDEX "documents_status_idx" ON "documents" USING btree ("status");--> statement-breakpoint
 CREATE INDEX "documents_updated_idx" ON "documents" USING btree ("updated_at");--> statement-breakpoint
@@ -28,3 +27,6 @@ CREATE INDEX "time_entries_project_date_idx" ON "time_entries" USING btree ("pro
 CREATE INDEX "time_entries_user_project_idx" ON "time_entries" USING btree ("user_id","project_id");--> statement-breakpoint
 CREATE INDEX "users_type_idx" ON "users" USING btree ("type");--> statement-breakpoint
 CREATE INDEX "users_onboarded_idx" ON "users" USING btree ("onboarded_at");
+--> statement-breakpoint
+CREATE UNIQUE INDEX "clients_firm_name_status_idx" ON "clients" USING btree ("firm_id", lower("name"), "status") INCLUDE ("contact", "email");--> statement-breakpoint
+CREATE UNIQUE INDEX "projects_firm_status_name_idx" ON "projects" USING btree ("firm_id", "status", lower("name")) INCLUDE ("client_id", "due", "progress");
