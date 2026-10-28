@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import type { WorkspaceData } from "@/types/workspace";
 import type { FirmSession } from "../auth/session";
 import { getDb } from "../db/client";
@@ -22,6 +22,7 @@ import {
 } from "../errors";
 import type { RecordInput } from "./input";
 import { toActivityItem, toISODate } from "./mappers";
+
 // Every query is scoped to the session's firm. Never take a firm ID from the
 // request body.
 export async function loadWorkspace(
@@ -30,6 +31,20 @@ export async function loadWorkspace(
 ): Promise<WorkspaceData> {
   const db = getDb();
   const { firmId } = session;
+  
+  // Pre-aggregate project counts to avoid N+1 queries
+  const clientProjectCounts = await db
+    .select({
+      clientId: projects.clientId,
+      count: sql`count(*)::int`,
+    })
+    .from(projects)
+    .where(eq(projects.firmId, firmId))
+    .groupBy(projects.clientId);
+  const projectCountMap = new Map(
+    clientProjectCounts.map((row) => [row.clientId, row.count]),
+  );
+  
   const [
     clientRows,
     projectRows,
@@ -45,7 +60,7 @@ export async function loadWorkspace(
         contact: clients.contact,
         email: clients.email,
         status: clients.status,
-        projects: db.$count(projects, eq(projects.clientId, clients.id)),
+        projects: projectCountMap.get(clients.id) ?? 0,
       })
       .from(clients)
       .where(eq(clients.firmId, firmId))
@@ -118,6 +133,7 @@ export async function loadWorkspace(
       .where(eq(timeEntries.firmId, firmId))
       .orderBy(desc(timeEntries.createdAt)),
   ]);
+  
   return {
     clients: clientRows,
     projects: projectRows,
